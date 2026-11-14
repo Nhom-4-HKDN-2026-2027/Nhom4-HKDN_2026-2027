@@ -12,10 +12,7 @@ mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI"))
 model_uri = os.getenv("MODEL_URI")
 model_name = os.getenv("MODEL_NAME")
 
-registered_model = mlflow.register_model(
-    model_uri=model_uri,
-    name=model_name
-)
+registered_model = mlflow.register_model(model_uri=model_uri, name=model_name)
 
 print("===== MODEL REGISTRY =====")
 print("Model name:", registered_model.name)

@@ -83,14 +83,10 @@ with mlflow.start_run(run_name="random-forest-baseline") as run:
 
     env_path = Path(__file__).resolve().parent.parent / ".env"
 
-    set_key(
-        str(env_path),
-        "MODEL_URI",
-        model_info.model_uri
-    )
+    set_key(str(env_path), "MODEL_URI", model_info.model_uri)
 
     print("Saved MODEL_URI:", model_info.model_uri)
-    
+
     print("\n===== MLFLOW INFORMATION =====")
     print("Experiment ID:", run.info.experiment_id)
     print("Run ID:", run.info.run_id)

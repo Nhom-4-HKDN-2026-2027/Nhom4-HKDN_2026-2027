@@ -27,7 +27,7 @@ if not MODEL_NAME:
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
- 
+
 # Model loading
 
 model = None
