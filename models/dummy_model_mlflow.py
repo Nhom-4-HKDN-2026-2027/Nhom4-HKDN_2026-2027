@@ -1,8 +1,7 @@
-import mlflow
 from pathlib import Path
-from dotenv import set_key
-
+import mlflow
 import mlflow.sklearn
+from dotenv import set_key
 from mlflow.models import infer_signature
 from sklearn.datasets import load_breast_cancer
 from sklearn.ensemble import RandomForestClassifier

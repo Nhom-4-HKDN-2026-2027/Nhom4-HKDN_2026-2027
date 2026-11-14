@@ -1,14 +1,13 @@
 import logging
 import os
 from contextlib import asynccontextmanager
-
+from pathlib import Path
 import mlflow
 import pandas as pd
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
-from pathlib import Path
-from dotenv import load_dotenv
 
 ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(ENV_PATH)
