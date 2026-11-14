@@ -7,18 +7,27 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
+from pathlib import Path
+from dotenv import load_dotenv
+
+ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(ENV_PATH)
 
 # Configuration
-
-MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://mlflow:5000")
-
-MODEL_NAME = os.getenv("MODEL_NAME", "BreastCancerRandomForest")
-
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI")
+MODEL_NAME = os.getenv("MODEL_NAME")
 MODEL_ALIAS = os.getenv("MODEL_ALIAS", "latest")
+MODEL_URI = os.getenv("MODEL_URI")
+
+if not MLFLOW_TRACKING_URI:
+    raise RuntimeError("Missing MLFLOW_TRACKING_URI in .env")
+
+if not MODEL_NAME:
+    raise RuntimeError("Missing MODEL_NAME in .env")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
+ 
 # Model loading
 
 model = None
@@ -30,10 +39,15 @@ async def lifespan(app: FastAPI):
 
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 
-    model_uri = f"models:/{MODEL_NAME}@{MODEL_ALIAS}"
+    if MODEL_URI:
+        model_uri = MODEL_URI
+    else:
+        model_uri = f"models:/{MODEL_NAME}@{MODEL_ALIAS}"
+
+    logger.info("MLflow URI: %s", MLFLOW_TRACKING_URI)
+    logger.info("Model URI: %s", model_uri)
 
     try:
-        logger.info("Loading model from: %s", model_uri)
         model = mlflow.pyfunc.load_model(model_uri)
         logger.info("Model loaded successfully")
     except Exception:
@@ -47,8 +61,8 @@ async def lifespan(app: FastAPI):
 
 # FastAPI app initialization
 app = FastAPI(
-    title="Breast Cancer Prediction API",
-    description="Interactive Swagger UI để test trực quan mô hình MLflow Model Registry (`BreastCancerRandomForest@latest`).",
+    title="Prediction API",
+    description="Interactive Swagger UI để test trực quan mô hình MLflow Model Registry.",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -136,7 +150,6 @@ def health_check():
     "/predict",
     response_model=PredictionResponse,
     tags=["Prediction"],
-    summary="Dự đoán chẩn đoán Breast Cancer",
 )
 def predict(request: PredictionRequest):
     if model is None:

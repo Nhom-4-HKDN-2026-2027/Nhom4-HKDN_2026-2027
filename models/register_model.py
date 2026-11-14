@@ -1,12 +1,20 @@
+import os
 import mlflow
+from dotenv import load_dotenv
+from pathlib import Path
 
-mlflow.set_tracking_uri("http://localhost:5000")
+env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(env_path, override=True)
 
-# Model URI lấy từ kết quả train ở bước 2.3
-model_uri = "models:/m-7aa59c5b12794a2394ecce75d1ac4ef6"
+mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI"))
 
-# Đăng ký model
-registered_model = mlflow.register_model(model_uri=model_uri, name="BreastCancerRandomForest")
+model_uri = os.getenv("MODEL_URI")
+model_name = os.getenv("MODEL_NAME")
+
+registered_model = mlflow.register_model(
+    model_uri=model_uri,
+    name=model_name
+)
 
 print("===== MODEL REGISTRY =====")
 print("Model name:", registered_model.name)
