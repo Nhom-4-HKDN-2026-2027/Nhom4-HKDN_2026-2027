@@ -1,4 +1,3 @@
-
 import mlflow
 
 mlflow.set_tracking_uri("http://localhost:5000")
@@ -7,10 +6,7 @@ mlflow.set_tracking_uri("http://localhost:5000")
 model_uri = "models:/m-7aa59c5b12794a2394ecce75d1ac4ef6"
 
 # Đăng ký model
-registered_model = mlflow.register_model(
-    model_uri=model_uri,
-    name="BreastCancerRandomForest"
-)
+registered_model = mlflow.register_model(model_uri=model_uri, name="BreastCancerRandomForest")
 
 print("===== MODEL REGISTRY =====")
 print("Model name:", registered_model.name)

@@ -1,17 +1,10 @@
-
 import mlflow
 import mlflow.sklearn
-
 from mlflow.models import infer_signature
 from sklearn.datasets import load_breast_cancer
-from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import (
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score
-)
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from sklearn.model_selection import train_test_split
 
 # ==========================================
 # 1. CONFIGURE MLFLOW
@@ -37,22 +30,14 @@ print("Samples:", X.shape[0])
 print("Features:", X.shape[1])
 
 X_train, X_test, y_train, y_test = train_test_split(
-    X,
-    y,
-    test_size=0.2,
-    random_state=42,
-    stratify=y
+    X, y, test_size=0.2, random_state=42, stratify=y
 )
 
 # ==========================================
 # 3. DEFINE MODEL PARAMETERS
 # ==========================================
 
-params = {
-    "n_estimators": 100,
-    "max_depth": 5,
-    "random_state": 42
-}
+params = {"n_estimators": 100, "max_depth": 5, "random_state": 42}
 
 model = RandomForestClassifier(**params)
 
@@ -61,7 +46,6 @@ model = RandomForestClassifier(**params)
 # ==========================================
 
 with mlflow.start_run(run_name="random-forest-baseline") as run:
-
     print("\n===== MODEL TRAINING =====")
 
     model.fit(X_train, y_train)
@@ -72,7 +56,7 @@ with mlflow.start_run(run_name="random-forest-baseline") as run:
         "accuracy": accuracy_score(y_test, y_pred),
         "precision": precision_score(y_test, y_pred),
         "recall": recall_score(y_test, y_pred),
-        "f1_score": f1_score(y_test, y_pred)
+        "f1_score": f1_score(y_test, y_pred),
     }
 
     # Log parameters
@@ -95,9 +79,7 @@ with mlflow.start_run(run_name="random-forest-baseline") as run:
         name="random-forest-model",
         signature=signature,
         input_example=X_test[:5],
-        skops_trusted_types=[
-            "sklearn.tree._tree.Tree"
-        ]
+        skops_trusted_types=["sklearn.tree._tree.Tree"],
     )
 
     print("\n===== MODEL EVALUATION =====")

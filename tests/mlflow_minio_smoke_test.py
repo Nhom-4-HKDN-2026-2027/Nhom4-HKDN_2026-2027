@@ -23,6 +23,7 @@ Lưu ý:
 """
 
 from __future__ import annotations
+
 import sys
 import tempfile
 import time
@@ -30,7 +31,6 @@ from pathlib import Path
 
 import mlflow
 from mlflow.tracking import MlflowClient
-
 
 TRACKING_URI = "http://localhost:5000"
 EXPERIMENT_NAME = "smoke-test"
@@ -106,6 +106,7 @@ def test_log_and_read_artifact(experiment_id: str) -> str:
 
     print("PASS: MLflow uploaded and downloaded the artifact successfully.")
     return run_id
+
 
 def test_timestamp(experiment_id: str) -> tuple[str, int]:
     """Tạo run mới, chờ 3 giây rồi kiểm tra duration."""
