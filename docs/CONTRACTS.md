@@ -543,3 +543,80 @@ This contract task is complete when:
 - At least one member from Data Pipeline, AI, and MLOps has approved the Pull Request.
 
 **End of Document**
+
+---
+
+## Metrics naming contract - Observability stack skeleton
+
+Status: Proposed — awaiting team approval.
+
+Transport: Python OpenTelemetry SDK → OpenTelemetry Collector
+→ Prometheus → Grafana.
+
+### Metric names
+
+| Prometheus metric | Type | Unit | Meaning |
+|---|---|---|---|
+| prediction_error | Histogram | Target units | Absolute error: abs(prediction - actual label) |
+| feature_drift_psi | Gauge | Dimensionless | Feature distribution drift measured using PSI |
+| drift_alerts_total | Counter | Transitions | Number of transitions into an active drift alert |
+| retrain_events_total | Counter | Events | Retraining lifecycle events |
+| process_cpu_seconds_total | Counter | Seconds | Cumulative user and system CPU time of the instrumented process |
+| process_resident_memory_bytes | Gauge | Bytes | Current resident memory of the instrumented process |
+
+### Naming conventions
+
+- Use lowercase snake_case for metric names.
+- Prometheus counters end in `_total`.
+- Include base units in names where applicable:
+  `_seconds` for time and `_bytes` for memory.
+- OpenTelemetry counter instrument names omit `_total`;
+  the Prometheus exporter adds the suffix.
+- The `prediction_error` histogram exposes:
+  - `prediction_error_bucket`
+  - `prediction_error_sum`
+  - `prediction_error_count`
+
+### Labels - Observability stack skeleton
+
+- Model metrics use `model_name` and `environment`.
+- Drift metrics additionally use `feature`.
+- Retrain events additionally use:
+  - `trigger`: `scheduled`, `drift`, `manual`
+  - `status`: `started`, `succeeded`, `failed`
+- Prometheus supplies `job` and `instance`.
+- Do not use entity IDs, request IDs, timestamps or raw error
+  messages as metric labels.
+
+### Measurement rules
+
+- Record absolute prediction error once per matched prediction/label pair.
+- Missing labels mean unavailable error data, not zero error.
+- Increment `drift_alerts_total` only when entering an active alert state.
+- Each retrain run emits one started event and one terminal event:
+  succeeded or failed.
+- Count retrain attempts using `status="started"` rather than
+  summing all statuses.
+- CPU and memory describe the instrumented process, not the whole host.
+- Counter values may reset when the process restarts;
+  use `rate()` or `increase()` for time-window calculations.
+
+### Dashboard query
+
+Mean absolute prediction error over the last minute:
+
+    sum(rate(prediction_error_sum[1m]))
+    /
+    sum(rate(prediction_error_count[1m]))
+
+### Implementation status
+
+The current demo implements only `prediction_error`, using synthetic
+normalized targets. Other metrics are proposed for future integration.
+
+### Required approvals
+
+- [ ] Data Pipeline representative
+- [ ] AI representative
+- [ ] MLOps representative
+### End Observability stack skeleton.
