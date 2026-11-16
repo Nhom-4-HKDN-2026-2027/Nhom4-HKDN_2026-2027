@@ -74,5 +74,8 @@ services:
       - "127.0.0.1:3000:3000"
     depends_on:
       - prometheus
+    volumes:
+      - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
 volumes:
   redpanda_data:
