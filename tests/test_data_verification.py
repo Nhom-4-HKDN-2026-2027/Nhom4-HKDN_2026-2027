@@ -74,13 +74,13 @@ def test_sample_files_exist_and_follow_contracts():
 def test_deliverable_artifacts_exist():
     """Verify that the notebook, ingest modules, and 1-page data quality report exist."""
     notebook = PROJECT_ROOT / "notebooks" / "01_verify_vn_data.ipynb"
-    report = PROJECT_ROOT / "docs" / "data_quality_report_vn.md"
+    report = PROJECT_ROOT / "docs" / "data_quality_report.md"
     openaq_mod = PROJECT_ROOT / "ingest" / "openaq_fetcher.py"
     openmeteo_mod = PROJECT_ROOT / "ingest" / "openmeteo_fetcher.py"
     verify_cli = PROJECT_ROOT / "ingest" / "verify_vn_data.py"
 
     assert notebook.is_file(), "Missing notebooks/01_verify_vn_data.ipynb"
-    assert report.is_file(), "Missing docs/data_quality_report_vn.md"
+    assert report.is_file(), "Missing docs/data_quality_report.md"
     assert openaq_mod.is_file(), "Missing ingest/openaq_fetcher.py"
     assert openmeteo_mod.is_file(), "Missing ingest/openmeteo_fetcher.py"
     assert verify_cli.is_file(), "Missing ingest/verify_vn_data.py"

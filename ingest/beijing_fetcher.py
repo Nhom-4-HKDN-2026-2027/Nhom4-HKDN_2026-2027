@@ -51,7 +51,7 @@ def relative_humidity_from_dewpoint(temperature: pd.Series, dewpoint: pd.Series)
 
     RH = 100 exp(17.625 Td/(243.04+Td) - 17.625 T/(243.04+T)).
     Missing/nonfinite inputs, singular denominators and Td > T yield NaN, not clipping.
-    See docs/beijing_multisite.md for the formula reference and approximation limits.
+    See docs/ingest_setup.md, section 6, for formula references and approximation limits.
     """
     t = pd.to_numeric(temperature, errors="coerce").astype(float)
     td = pd.to_numeric(dewpoint, errors="coerce").astype(float)
