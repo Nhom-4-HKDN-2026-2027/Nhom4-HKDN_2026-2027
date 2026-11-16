@@ -129,7 +129,7 @@ Please only modify the checklist under your name to minimize merge conflicts.
 
 ## Completion Criteria
 
-- [ ] All 9 members are listed in this file.
+- [ ] All 10 members are listed in this file.
 - [ ] Every member has installed the required development tools.
 - [ ] Every member has cloned the repository successfully.
 - [ ] Every member can run Docker Compose successfully.
