@@ -87,8 +87,10 @@ def test_compose_layout():
     assert services["minio"]["volumes"] == ["miniodata:/data"]
     for bucket in BUCKETS:
         assert bucket in services["minio-init"]["command"][0].replace(";", " ").split()
-    assert services["minio"]["image"] == "minio/minio"
-    assert services["minio"]["healthcheck"]["test"] == ["CMD", "mc", "ready", "local"]
+    assert services["minio"]["image"] == "chainguard/minio:latest"
+    assert services["minio"]["healthcheck"]["test"] == [
+        "CMD", "mc", "--config-dir", "/tmp/mc", "ready", "local"
+    ]
     assert services["grafana"]["ports"] == ["127.0.0.1:3000:3000"]
     assert "data-seed" not in services
     assert all("build" not in service for service in services.values())
