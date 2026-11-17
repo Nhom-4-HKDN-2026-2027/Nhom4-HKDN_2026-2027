@@ -27,7 +27,7 @@ Please only modify the checklist under your name to minimize merge conflicts.
 - [X] Run `docker compose up` successfully
 - [X] Verify Redpanda is healthy using `docker compose ps`
 - [X] Create a small Pull Request
-- [ ] Get the Pull Request reviewed and merged into `main`
+- [X] Get the Pull Request reviewed and merged into `main`
 
 ## 3. KhiemVoTran (`KhiemVoTran`) — Write
 
