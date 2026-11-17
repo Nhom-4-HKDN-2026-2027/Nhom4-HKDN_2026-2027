@@ -14,9 +14,9 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pandas as pd
 
-from ingest.config import PROJECT_ROOT
-from ingest.feature_schema import FEATURE_COLUMNS
-from ingest.openaq_fetcher import _get_with_retry, _validate_window
+from ingest.feature_contract import FEATURE_COLUMNS
+from ingest.fetch_openaq import _get_with_retry, _validate_window
+from ingest.pipeline_config import PROJECT_ROOT
 
 logger = logging.getLogger(__name__)
 SOURCE_URL = "https://archive.ics.uci.edu/static/public/501/beijing+multi+site+air+quality+data.zip"

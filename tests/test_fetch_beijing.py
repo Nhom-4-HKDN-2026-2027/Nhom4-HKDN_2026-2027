@@ -11,7 +11,7 @@ import pandas as pd
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from ingest import beijing_fetcher as bj  # noqa: E402
+from ingest import fetch_beijing as bj  # noqa: E402
 
 
 def source_frame(periods=1, station="Aotizhongxin"):

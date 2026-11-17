@@ -19,7 +19,7 @@ python3.11 -m venv .venv/py311
 
 ## 2. Configure the pipeline and API key
 
-`ingest/vn_pipeline.toml` is the shared, non-secret CLI/notebook configuration: UTC window, activity cutoff, sample dates, quality thresholds, boundary-gap policy, weather model and output paths. Relative TOML paths resolve against the repository root. Use new raw/sample output paths for each backfill; existing files are never intentionally overwritten.
+`ingest/vietnam_pipeline.toml` is the shared, non-secret CLI/notebook configuration: UTC window, activity cutoff, sample dates, quality thresholds, boundary-gap policy, weather model and output paths. Relative TOML paths resolve against the repository root. Use new raw/sample output paths for each backfill; existing files are never intentionally overwritten.
 
 The key is read from `OPENAQ_API_KEY`; **`.env` is not loaded automatically**. Enter the key without echoing it, using **one** block in the terminal that will run the backfill.
 
@@ -52,8 +52,8 @@ Keep the key out of TOML, notebooks, reports and command history. Run the remain
 The handoff samples are `data/sample/openaq_pm25_hanoi_hcmc.csv` (815 rows) and `data/sample/openmeteo_weather_hanoi_hcmc.csv` (840 rows), from the 2026-11-16 backfill. Preserve them when testing a new fetch. Use **new raw and sample output paths**, such as the following; choose different names if these already exist:
 
 ```sh
-.venv/py311/bin/python -m ingest.verify_vn_data --config ingest/vn_pipeline.toml --fetch --raw-dir data/raw/new_run --sample-dir data/raw/new_run_samples
-.venv/py311/bin/python -m ingest.verify_vn_data --config ingest/vn_pipeline.toml --raw-dir data/raw/new_run --no-write
+.venv/py311/bin/python -m ingest.verify_vietnam_data --config ingest/vietnam_pipeline.toml --fetch --raw-dir data/raw/new_run --sample-dir data/raw/new_run_samples
+.venv/py311/bin/python -m ingest.verify_vietnam_data --config ingest/vietnam_pipeline.toml --raw-dir data/raw/new_run --no-write
 ```
 
 The CLI checks all output paths before calling APIs. The second command validates the cache and recomputes results in memory without writing files. New samples are placed under `data/raw/` in this example to keep exploratory outputs separate from the handoff samples in Git.
@@ -125,7 +125,7 @@ The official download contains `PRSA2017_Data_20130301-20170228.zip` plus unrela
 After completing the environment setup above, run from the repository root:
 
 ```sh
-.venv/py311/bin/python -m ingest.beijing_fetcher --output data/raw/beijing_multisite/reproduced_features.csv --metadata data/raw/beijing_multisite/reproduced_manifest.json
+.venv/py311/bin/python -m ingest.fetch_beijing --output data/raw/beijing_multisite/reproduced_features.csv --metadata data/raw/beijing_multisite/reproduced_manifest.json
 ```
 
 No API key is required. The CLI downloads the public archive to `data/raw/beijing_multisite/uci_501.zip` if absent, otherwise reuses it. Outputs must not already exist. Defaults select `[2015-11-15T00:00:00Z, 2015-11-22T00:00:00Z)` and all 12 sites. Pass `--archive`, `--start`, `--end`, `--source-timezone`, `--output` and `--metadata` to select another source file or seven-day window. Calendar bounds must be timezone-aware whole hours; exactly seven days are required for this sample workflow.
@@ -160,11 +160,11 @@ Wind uses the standard [16-point compass bearings](https://www.weather.gov/media
 
 ### Shared downstream adapter
 
-CSV timestamp values are serialized as ISO 8601 strings; they become UTC timestamps when loaded for downstream processing. Vietnam's existing split CSVs retain numeric OpenAQ IDs for compatibility. `ingest/feature_schema.py` provides the common in-memory interface:
+CSV timestamp values are serialized as ISO 8601 strings; they become UTC timestamps when loaded for downstream processing. Vietnam's existing split CSVs retain numeric OpenAQ IDs for compatibility. `ingest/feature_contract.py` provides the common in-memory interface:
 
 ```python
 import pandas as pd
-from ingest.feature_schema import build_vietnam_features, normalize_feature_table
+from ingest.feature_contract import build_vietnam_features, normalize_feature_table
 
 vn_features = build_vietnam_features(
     pd.read_csv("data/sample/openaq_pm25_hanoi_hcmc.csv"),

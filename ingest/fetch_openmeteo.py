@@ -9,7 +9,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from ingest.openaq_fetcher import _get_with_retry
+from ingest.fetch_openaq import _get_with_retry
 
 logger = logging.getLogger(__name__)
 

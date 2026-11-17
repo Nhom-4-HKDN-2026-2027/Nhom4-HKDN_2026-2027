@@ -9,7 +9,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from ingest.feature_schema import (  # noqa: E402
+from ingest.feature_contract import (  # noqa: E402
     FEATURE_COLUMNS,
     build_vietnam_features,
     normalize_feature_table,

@@ -1,13 +1,13 @@
 """Data ingestion and quality verification utilities for OpenAQ and Open-Meteo."""
 
-from ingest.openaq_fetcher import (
+from ingest.fetch_openaq import (
     classify_station_lifecycle,
     compute_completeness_and_gaps,
     fetch_all_active_stations_2yr,
     fetch_sensor_hourly_pm25,
     fetch_vietnam_pm25_stations,
 )
-from ingest.openmeteo_fetcher import (
+from ingest.fetch_openmeteo import (
     fetch_station_hourly_weather,
     fetch_usable_stations_weather_2yr,
 )

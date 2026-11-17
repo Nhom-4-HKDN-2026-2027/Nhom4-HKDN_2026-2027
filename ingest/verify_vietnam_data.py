@@ -13,8 +13,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from ingest.config import DEFAULT_CONFIG, PipelineConfig, load_config
-from ingest.openaq_fetcher import (
+from ingest.fetch_openaq import (
     PM25_HOURLY_COLS,
     STATIONS_METADATA_COLS,
     classify_station_lifecycle,
@@ -22,10 +21,11 @@ from ingest.openaq_fetcher import (
     fetch_all_active_stations_2yr,
     fetch_vietnam_pm25_stations,
 )
-from ingest.openmeteo_fetcher import (
+from ingest.fetch_openmeteo import (
     WEATHER_COLS,
     fetch_usable_stations_weather_2yr,
 )
+from ingest.pipeline_config import DEFAULT_CONFIG, PipelineConfig, load_config
 
 logger = logging.getLogger(__name__)
 
