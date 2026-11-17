@@ -472,3 +472,11 @@ Important documents:
 | `docs/CONTRACTS.md` | Data and service integration contracts |
 
 Additional technical documentation will be added as the project evolves.
+
+### Historical datasets and MinIO
+
+Run `docker compose up -d` to initialize MinIO and the shared buckets. Then run
+`python -m ingest.historical_datasets --all` inside the configured `.venv` to
+prepare and upload Beijing Multi-Site sample data and River Elec2 as Parquet.
+See [Storage layout and dataset preparation](docs/STORAGE_LAYOUT.md) for the
+schemas, file naming, provenance, credentials and setup commands.
