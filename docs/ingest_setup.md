@@ -182,3 +182,49 @@ Verified source archive SHA-256:
 
 Handoff CSV SHA-256:
 `525ba52fbde3001bd2f80f901911f77dd3d003f32a8d8a0d40698301545ed162`
+
+## 7. File structure and responsibilities
+
+### Ingestion and configuration
+
+| File | Responsibility |
+|---|---|
+| `ingest/fetch_openaq.py` | Discover Vietnam PM2.5 locations, fetch hourly observations, select one sensor per location and calculate completeness, gaps and lifecycle counts. |
+| `ingest/fetch_openmeteo.py` | Fetch ERA5 weather at selected station coordinates and validate hourly timestamps and units while retaining permitted missing values. |
+| `ingest/fetch_beijing.py` | Download/read the UCI Multi-Site archive and extract a seven-day sample with derived humidity, wind bearings and UTC timestamps. |
+| `ingest/verify_vietnam_data.py` | Run the Vietnam CLI: coordinate fetching, verify cached data and provenance, and produce quality summaries, gaps and samples. |
+| `ingest/feature_contract.py` | Join Vietnam PM2.5/weather and normalize Vietnam and Beijing tables to the same seven-column downstream contract. |
+| `ingest/pipeline_config.py` | Load and validate pipeline configuration and resolve repository-relative paths. |
+| `ingest/vietnam_pipeline.toml` | Define Vietnam evaluation/sample windows, screening parameters, weather model and output paths; contains no API key. |
+| `ingest/__init__.py` | Expose selected ingestion and quality functions as package imports. |
+
+### Analysis, data and environment
+
+| Path | Responsibility |
+|---|---|
+| `notebooks/01_verify_vn_data.ipynb` | Read local source data, recompute quality tables/charts and samples in memory, compare the Beijing sample with its source and verify the shared schema. Run ingestion first. |
+| `data/raw/` | Local normalized Vietnam CSVs, manifests, quality outputs and the Beijing source archive. Excluded from Git; a clone alone cannot reproduce the full notebook analysis. |
+| `data/sample/openaq_pm25_hanoi_hcmc.csv` | One-week Vietnam PM2.5 handoff sample extracted from the backfill. |
+| `data/sample/openmeteo_weather_hanoi_hcmc.csv` | Weather for the same Vietnam sample window and selected stations. |
+| `data/sample/beijing_multisite_features.csv` | One-week, twelve-site Beijing handoff sample in the shared feature schema. |
+| `requirements-py311.lock` | Pinned Python dependencies for reproducing the tested Python 3.11 environment. |
+| `docs/data_quality_report.md` | Findings, limitations and the demo/experiment decision. This setup guide documents how to reproduce them. |
+
+### Tests
+
+| File | Responsibility |
+|---|---|
+| `tests/test_vietnam_data.py` | Offline OpenAQ/Open-Meteo fetching, retries, sensor selection, completeness, gaps, lifecycle and weather validation. |
+| `tests/test_vietnam_pipeline.py` | Cache validation, manifests, sample handoff, custom configuration, reproducible outputs and CLI protection against overwrites. |
+| `tests/test_pipeline_config.py` | Reject invalid configuration values and unknown TOML keys. |
+| `tests/test_fetch_beijing.py` | Beijing source/archive handling, conversions, missing values and sample checks. |
+| `tests/test_feature_contract.py` | Shared schema/types, Vietnam joins, missing-value preservation and malformed-input rejection. |
+| `tests/test_project_structure.py` | General repository structure checks, separate from data-quality calculations. |
+
+### Execution flow
+
+Vietnam: `vietnam_pipeline.toml` → `verify_vietnam_data` → OpenAQ observations and selected-station Open-Meteo weather → local raw CSVs and manifest → completeness/gap outputs and one-week samples.
+
+Beijing: UCI Multi-Site archive → `fetch_beijing` → conversions and seven-day extraction → feature sample and local provenance metadata.
+
+The notebook reads the local sources and recomputes the analysis; the report summarizes the verified findings. `feature_contract` provides the common downstream interface for both datasets. Missing intervals remain visible throughout these flows; they are not filled from other stations.
