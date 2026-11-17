@@ -181,6 +181,30 @@ The maximum label delay and update mechanism are TBD.
 
 ---
 
+### 3.7. Historical Raw Storage
+
+Historical ingestion uses the shared MinIO service at `http://minio:9000`
+inside Compose (`http://localhost:9000` from the host).
+
+- Buckets: `raw`, `staging`, `features`, `models`, plus the existing MLOps `mlflow` bucket.
+- Beijing: `s3://raw/beijing_pm25/year=<UTC year>/station_id=<id>/data.parquet`.
+- Elec2: `s3://raw/elec2/elec2.parquet` (a separate classification benchmark).
+- Dataset manifests: `s3://raw/<dataset>/manifest.json`.
+- Beijing retains the seven columns in §3.2. Partition years are derived after
+  converting timestamps to UTC. Numeric missing values remain missing.
+- Compose initializes MinIO and buckets only. Dataset preparation/upload is a
+  manual Python CLI operation; a new MinIO instance initially has empty buckets.
+- The uploader publishes Parquet files before its manifest; consumers should read
+  manifest-listed files after a successful upload.
+- Repeated uploads skip existing objects. Replacing a different dataset requires
+  `--force`. Uploads are not transactional.
+
+See [Storage layout](STORAGE_LAYOUT.md) for source versions, timestamp assumptions,
+reader examples and operational details. Existing feature/model schemas and the
+proposed downstream feature/label interfaces remain unchanged.
+
+---
+
 ## 4. Model Interface Contract
 
 **Direction:** AI → MLOps

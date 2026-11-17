@@ -1,5 +1,7 @@
 """S3 storage operations for the shared MinIO layout."""
 
+import hashlib
+import json
 import os
 
 import boto3
@@ -38,14 +40,42 @@ def ensure_buckets(client, buckets=BUCKETS):
             client.create_bucket(Bucket=bucket)
 
 
-def upload_historical_datasets(client, directories, force=False):
-    """Upload Parquet objects followed by their manifest; return uploaded keys."""
-    uploaded = []
+def upload_historical_datasets(client, directories, force: bool = False) -> list[str]:
+    """Publish manifest-listed objects; require force to replace a different dataset."""
+    plans = []
+    # Check every dataset before mutating S3, so a later mismatch cannot cause partial updates.
     for directory in directories:
-        paths = sorted(directory.rglob("*.parquet")) + [directory / "manifest.json"]
-        for path in paths:
-            key = f"{directory.name}/{path.relative_to(directory).as_posix()}"
+        manifest = json.loads((directory / "manifest.json").read_text())
+        for path, checksum in manifest["sha256_checksum"].items():
+            local_path = (directory / path).resolve()
+            if not local_path.is_relative_to(directory.resolve()) or not path.endswith(".parquet"):
+                raise ValueError("Invalid manifest Parquet path")
+            if hashlib.sha256(local_path.read_bytes()).hexdigest() != checksum:
+                raise ValueError(f"Local checksum mismatch: {path}")
+        previous = {}
+        key = f"{directory.name}/manifest.json"
+        if exists(client.head_object, Bucket="raw", Key=key):
+            response = client.get_object(Bucket="raw", Key=key)
+            with response["Body"] as body:
+                previous = json.loads(body.read())
+            if previous.get("sha256_checksum") != manifest["sha256_checksum"] and not force:
+                raise ValueError(f"Dataset {directory.name} changed; use --force to replace it")
+        plans.append((directory, manifest, previous))
+    uploaded = []
+    for directory, manifest, previous in plans:
+        for path in sorted(manifest["sha256_checksum"]):
+            key = f"{directory.name}/{path}"
             if force or not exists(client.head_object, Bucket="raw", Key=key):
-                client.upload_file(str(path), "raw", key)
+                client.upload_file(str(directory / path), "raw", key)
                 uploaded.append(key)
+        if force:
+            obsolete = set(previous.get("sha256_checksum", {})) - set(manifest["sha256_checksum"])
+            for path in sorted(obsolete):
+                if path.startswith("/") or ".." in path.split("/") or not path.endswith(".parquet"):
+                    raise ValueError("Invalid previous manifest path; refusing deletion")
+                client.delete_object(Bucket="raw", Key=f"{directory.name}/{path}")
+        key = f"{directory.name}/manifest.json"
+        if force or not exists(client.head_object, Bucket="raw", Key=key):
+            client.upload_file(str(directory / "manifest.json"), "raw", key)
+            uploaded.append(key)
     return uploaded

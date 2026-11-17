@@ -475,8 +475,10 @@ Additional technical documentation will be added as the project evolves.
 
 ### Historical datasets and MinIO
 
-Run `docker compose up -d` to initialize MinIO and the shared buckets. Then run
-`python -m ingest.historical_datasets --all` inside the configured `.venv` to
-prepare and upload Beijing Multi-Site sample data and River Elec2 as Parquet.
-See [Storage layout and dataset preparation](docs/STORAGE_LAYOUT.md) for the
-schemas, file naming, provenance, credentials and setup commands.
+Run `docker compose up -d` to start MinIO and initialize the shared buckets.
+To populate a new MinIO instance, run `python -m ingest.historical_datasets --all`
+inside the configured `.venv`. This prepares the full Beijing Multi-Site dataset
+(2013–2017), partitioned by UTC year/station, and River Elec2 as Parquet.
+Compose does not download or upload datasets automatically.
+See [Storage layout and dataset preparation](docs/STORAGE_LAYOUT.md) for
+schemas, provenance, cached downloads and manual upload commands.
