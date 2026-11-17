@@ -98,8 +98,8 @@ Please only modify the checklist under your name to minimize merge conflicts.
 - [x] Clone the project repository
 - [x] Run `docker compose up` successfully
 - [x] Verify Redpanda is healthy using `docker compose ps`
-- [ ] Create a small Pull Request
-- [ ] Get the Pull Request reviewed and merged into `main`
+- [x] Create a small Pull Request
+- [x] Get the Pull Request reviewed and merged into `main`
 
 ## 9. trthien123 — Write
 
