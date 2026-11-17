@@ -94,7 +94,12 @@ def test_compose_layout():
         assert bucket in services["minio-init"]["command"][0].replace(";", " ").split()
     assert services["minio"]["image"] == "chainguard/minio:latest"
     assert services["minio"]["healthcheck"]["test"] == [
-        "CMD", "mc", "--config-dir", "/tmp/mc", "ready", "local"
+        "CMD",
+        "mc",
+        "--config-dir",
+        "/tmp/mc",
+        "ready",
+        "local",
     ]
     assert "build" not in services["minio"]
     assert services["grafana"]["ports"] == ["127.0.0.1:3000:3000"]
