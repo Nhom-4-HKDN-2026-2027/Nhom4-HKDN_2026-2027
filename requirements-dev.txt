@@ -3,3 +3,8 @@ pytest==9.2.0
 pre-commit==4.7.0
 opentelemetry-sdk==1.31.1
 opentelemetry-exporter-otlp-proto-grpc==1.31.1
+pyyaml==6.0.3
+pandas==2.3.3
+pyarrow==22.0.0
+river==0.22.0
+boto3==1.40.70
