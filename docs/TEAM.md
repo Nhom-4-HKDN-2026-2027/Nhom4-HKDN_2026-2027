@@ -17,16 +17,16 @@ Please only modify the checklist under your name to minimize merge conflicts.
 - [X] Create a small Pull Request
 - [X] Get the Pull Request reviewed and merged into `main`
 
-## 2. huynhgiangcam3004-crypto — Write
+## 2. HuynhThiCamGiang — Write
 
-- [ ] Install Git
-- [ ] Install Docker Desktop
-- [ ] Install Python 3.11+
-- [ ] Install VS Code
-- [ ] Clone the project repository
-- [ ] Run `docker compose up` successfully
-- [ ] Verify Redpanda is healthy using `docker compose ps`
-- [ ] Create a small Pull Request
+- [X] Install Git
+- [X] Install Docker Desktop
+- [X] Install Python 3.11+
+- [X] Install VS Code
+- [X] Clone the project repository
+- [X] Run `docker compose up` successfully
+- [X] Verify Redpanda is healthy using `docker compose ps`
+- [X] Create a small Pull Request
 - [ ] Get the Pull Request reviewed and merged into `main`
 
 ## 3. KhiemVoTran (`KhiemVoTran`) — Write
