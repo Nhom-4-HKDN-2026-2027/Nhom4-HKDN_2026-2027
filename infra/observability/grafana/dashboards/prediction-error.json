@@ -1,0 +1,53 @@
+{
+  "uid": "prediction-error-provisioned",
+  "title": "Nhom 4 - MLOps — Prediction Error Demo",
+  "schemaVersion": 40,
+  "version": 1,
+  "refresh": "5s",
+  "time": {
+    "from": "now-5m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Mean Absolute Prediction Error — Demo",
+      "description": "Synthetic data. Rolling one-minute mean absolute error.",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-provisioned"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(prediction_error_sum[1m])) / sum(rate(prediction_error_count[1m]))",
+          "legendFormat": "Mean absolute error",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      }
+    }
+  ]
+}
