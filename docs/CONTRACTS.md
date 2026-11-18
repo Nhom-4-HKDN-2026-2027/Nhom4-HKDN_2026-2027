@@ -181,6 +181,30 @@ The maximum label delay and update mechanism are TBD.
 
 ---
 
+### 3.7. Historical Raw Storage
+
+Historical ingestion uses the shared MinIO service at `http://minio:9000`
+inside Compose (`http://localhost:9000` from the host).
+
+- Buckets: `raw`, `staging`, `features`, `models`, plus the existing MLOps `mlflow` bucket.
+- Beijing: `s3://raw/beijing_pm25/year=<UTC year>/station_id=<id>/data.parquet`.
+- Elec2: `s3://raw/elec2/elec2.parquet` (a separate classification benchmark).
+- Dataset manifests: `s3://raw/<dataset>/manifest.json`.
+- Beijing retains the seven columns in §3.2. Partition years are derived after
+  converting timestamps to UTC. Numeric missing values remain missing.
+- Compose initializes MinIO and buckets only. Dataset preparation/upload is a
+  manual Python CLI operation; a new MinIO instance initially has empty buckets.
+- The uploader publishes Parquet files before its manifest; consumers should read
+  manifest-listed files after a successful upload.
+- Repeated uploads skip existing objects. Replacing a different dataset requires
+  `--force`. Uploads are not transactional.
+
+See [Storage layout](STORAGE_LAYOUT.md) for source versions, timestamp assumptions,
+reader examples and operational details. Existing feature/model schemas and the
+proposed downstream feature/label interfaces remain unchanged.
+
+---
+
 ## 4. Model Interface Contract
 
 **Direction:** AI → MLOps
@@ -543,3 +567,80 @@ This contract task is complete when:
 - At least one member from Data Pipeline, AI, and MLOps has approved the Pull Request.
 
 **End of Document**
+
+---
+
+## Metrics naming contract - Observability stack skeleton
+
+Status: Proposed — awaiting team approval.
+
+Transport: Python OpenTelemetry SDK → OpenTelemetry Collector
+→ Prometheus → Grafana.
+
+### Metric names
+
+| Prometheus metric | Type | Unit | Meaning |
+|---|---|---|---|
+| prediction_error | Histogram | Target units | Absolute error: abs(prediction - actual label) |
+| feature_drift_psi | Gauge | Dimensionless | Feature distribution drift measured using PSI |
+| drift_alerts_total | Counter | Transitions | Number of transitions into an active drift alert |
+| retrain_events_total | Counter | Events | Retraining lifecycle events |
+| process_cpu_seconds_total | Counter | Seconds | Cumulative user and system CPU time of the instrumented process |
+| process_resident_memory_bytes | Gauge | Bytes | Current resident memory of the instrumented process |
+
+### Naming conventions
+
+- Use lowercase snake_case for metric names.
+- Prometheus counters end in `_total`.
+- Include base units in names where applicable:
+  `_seconds` for time and `_bytes` for memory.
+- OpenTelemetry counter instrument names omit `_total`;
+  the Prometheus exporter adds the suffix.
+- The `prediction_error` histogram exposes:
+  - `prediction_error_bucket`
+  - `prediction_error_sum`
+  - `prediction_error_count`
+
+### Labels - Observability stack skeleton
+
+- Model metrics use `model_name` and `environment`.
+- Drift metrics additionally use `feature`.
+- Retrain events additionally use:
+  - `trigger`: `scheduled`, `drift`, `manual`
+  - `status`: `started`, `succeeded`, `failed`
+- Prometheus supplies `job` and `instance`.
+- Do not use entity IDs, request IDs, timestamps or raw error
+  messages as metric labels.
+
+### Measurement rules
+
+- Record absolute prediction error once per matched prediction/label pair.
+- Missing labels mean unavailable error data, not zero error.
+- Increment `drift_alerts_total` only when entering an active alert state.
+- Each retrain run emits one started event and one terminal event:
+  succeeded or failed.
+- Count retrain attempts using `status="started"` rather than
+  summing all statuses.
+- CPU and memory describe the instrumented process, not the whole host.
+- Counter values may reset when the process restarts;
+  use `rate()` or `increase()` for time-window calculations.
+
+### Dashboard query
+
+Mean absolute prediction error over the last minute:
+
+    sum(rate(prediction_error_sum[1m]))
+    /
+    sum(rate(prediction_error_count[1m]))
+
+### Implementation status
+
+The current demo implements only `prediction_error`, using synthetic
+normalized targets. Other metrics are proposed for future integration.
+
+### Required approvals
+
+- [ ] Data Pipeline representative
+- [ ] AI representative
+- [ ] MLOps representative
+### End Observability stack skeleton.

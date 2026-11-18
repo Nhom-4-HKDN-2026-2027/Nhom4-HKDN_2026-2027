@@ -1,0 +1,12 @@
+[pipeline]
+window_start_utc = "2024-11-14T00:00:00Z"
+window_end_utc = "2026-11-14T00:00:00Z"
+alive_cutoff_utc = "2026-11-01T00:00:00Z"
+sample_start_utc = "2025-11-15T00:00:00Z"
+sample_end_utc = "2025-11-22T00:00:00Z"
+max_missing_2yr_pct = 60.0
+max_gt500_count = 0
+include_boundary_gaps = false
+weather_model = "era5"
+raw_dir = "data/raw/verified_2026-11-16"
+sample_dir = "data/sample"
