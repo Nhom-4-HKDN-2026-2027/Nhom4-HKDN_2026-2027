@@ -33,7 +33,7 @@ Please only modify the checklist under your name to minimize merge conflicts.
 
 - [x] Install Git
 - [x] Install Docker Desktop
-- [x] Install Python 3.11+
+- [x] Install Python 3.11+    
 - [x] Install VS Code
 - [x] Clone the project repository
 - [x] Run `docker compose up` successfully
