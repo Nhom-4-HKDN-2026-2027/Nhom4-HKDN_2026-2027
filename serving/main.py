@@ -16,7 +16,7 @@ load_dotenv(ENV_PATH)
 # Configuration
 MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI")
 MODEL_NAME = os.getenv("MODEL_NAME")
-MODEL_ALIAS = os.getenv("MODEL_ALIAS", "latest")
+MODEL_ALIAS = os.getenv("MODEL_ALIAS")
 MODEL_URI = os.getenv("MODEL_URI")
 
 if not MLFLOW_TRACKING_URI:
@@ -40,15 +40,15 @@ async def lifespan(app: FastAPI):
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 
     if MODEL_URI:
-        model_uri = MODEL_URI
+        MODEL_URI = MODEL_URI
     else:
-        model_uri = f"models:/{MODEL_NAME}@{MODEL_ALIAS}"
+        MODEL_URI = f"models:/{MODEL_NAME}@{MODEL_ALIAS}"
 
     logger.info("MLflow URI: %s", MLFLOW_TRACKING_URI)
-    logger.info("Model URI: %s", model_uri)
+    logger.info("Model URI: %s", MODEL_URI)
 
     try:
-        model = mlflow.pyfunc.load_model(model_uri)
+        model = mlflow.pyfunc.load_model(MODEL_URI)
         logger.info("Model loaded successfully")
     except Exception:
         logger.exception("Failed to load model")
