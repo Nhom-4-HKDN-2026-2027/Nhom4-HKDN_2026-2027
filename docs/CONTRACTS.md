@@ -1,646 +1,496 @@
-
-# Team Integration Contracts
-
-**Project:** Adaptive Model Updating in Automated Data Pipelines
-
-**Version:** 0.1.0
-
-**Status:** Draft - Pending Team Approval
+# INTER-TEAM TECHNICAL AGREEMENT
+## PROJECT: Adaptive Machine Learning Model Updating
 
 ---
 
-## 1. Purpose
+## General Information
 
-This document defines the shared technical interfaces between the three project teams:
-
-- Data Pipeline
-- AI
-- MLOps
-
-The purpose is to allow all teams to develop their components independently without waiting for other teams to finish their implementation.
-
-Each team must agree on the required inputs, outputs, data formats, function interfaces, and metrics before integration.
-
-Teams can use sample data or mock implementations while the actual components are being developed.
-
-This document focuses on three main interfaces:
-
-1. Feature Table Contract (Data Pipeline → AI).
-2. Model Interface Contract (AI → MLOps).
-3. Metrics Contract (MLOps → All Teams).
+**Objective:** Establish consistent data, model, deployment, and monitoring interfaces so that the three teams can develop in parallel without depending on one another's completion.
 
 ---
 
-## 2. Shared Conventions
+## PART 1. DATA PIPELINE → AI → MLOPS
 
-The following conventions are proposed for all teams.
+### 1. Data Contract – Feature Table
+*Responsible team: Data Pipeline | Reviewing teams: AI, MLOps*
 
-| Item | Convention | Status |
-|---|---|---|
-| Python version | Python 3.11 | Agreed |
-| Timestamp format | ISO 8601 | Proposed |
-| Timezone | UTC | Proposed |
-| Python naming | snake_case | Proposed |
-| Streaming format | JSON | Proposed |
-| Processed data format | Parquet | Proposed |
-| Version control | Git and GitHub | Agreed |
+#### 1.1. Data Source Information
 
-All teams should follow the agreed conventions when implementing shared interfaces.
+| Item | Agreed Information |
+| :--- | :--- |
+| **Datasets** | 1. **Historical Benchmark:** Beijing Multi-Site Air Quality Dataset and Elec2 Dataset<br>2. **Live / Vietnam Air Quality:** OpenAQ (PM2.5) + Open-Meteo ERA5 (Weather) |
+| **Data sources** | - Beijing Air Quality: Kaggle (`sid321axn/beijing-multisite-airquality-data-set`), UCI (`10.24432/C5RK5G`)<br>- Elec2: River ML datasets (`river.datasets.Elec2`)<br>- Vietnam PM2.5: OpenAQ API<br>- Vietnam Weather: Open-Meteo API (Historical / Forecast Weather model `era5`) |
+| **Cities / regions** | - Beijing: 12 monitoring stations in Beijing<br>- Vietnam: Hanoi and Ho Chi Minh City (HCMC)<br>- Elec2: New South Wales, Australia |
+| **Data time range** | - Beijing: 2013-03-01 – 2017-02-28 (hourly)<br>- Vietnam: 2024-11-14 – 2026-11-14 (2 years, according to `vietnam_pipeline.toml`); one-week sample: 2025-11-15 – 2025-11-22 |
+| **Data formats** | Parquet (primary processing/storage format) / CSV (sample or exported data) |
+| **Storage location** | MinIO S3 object storage (buckets: `raw`, `staging`, `features`) at `http://minio:9000` (inside Docker) or `http://localhost:9000` (host); local storage at `data/raw/` and `data/sample/` |
+| **Update frequency** | Hourly |
+| **Owner** | TO BE FILLED IN |
+
+#### 1.2. Feature Table Schema
+
+- **Table name:** `pm25_hourly_features`
+- **Description:** An hourly feature table containing historical PM2.5 concentrations and meteorological variables for PM2.5 forecasting.
+
+| No. | Column name | Data type | Unit | Nullable? | Description |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | `timestamp` *(called `event_time` in code)* | TIMESTAMP (ISO 8601 UTC) | UTC | No | Observation time, rounded to the hour |
+| 2 | `station_id` | STRING | - | No | Monitoring station identifier |
+| 3 | `pm25` *(called `pm25_ug_m3` in code)* | FLOAT | µg/m³ | Yes | Measured PM2.5 concentration (preserve NaN when missing) |
+| 4 | `pm25_lag_1h` | TO BE FILLED IN *(experimented with as `pm25_lag1` in the baseline notebook, but not yet included in the Data Pipeline contract schema)* | µg/m³ | TO BE FILLED IN | PM2.5 concentration lagged by 1 hour |
+| 5 | `pm25_lag_3h` | TO BE FILLED IN *(experimented with as `pm25_lag3` in the baseline notebook, but not yet included in the Data Pipeline contract schema)* | µg/m³ | TO BE FILLED IN | PM2.5 concentration lagged by 3 hours |
+| 6 | `pm25_lag_24h` | TO BE FILLED IN *(experimented with as `pm25_lag24` in the baseline notebook, but not yet included in the Data Pipeline contract schema)* | µg/m³ | TO BE FILLED IN | PM2.5 concentration lagged by 24 hours |
+| 7 | `temperature` *(called `temperature_c` in code)* | FLOAT | °C | Yes | Air temperature |
+| 8 | `humidity` *(called `relative_humidity_pct` in code)* | FLOAT | % | Yes | Relative humidity |
+| 9 | `wind_speed` *(called `wind_speed_m_s` in code)* | FLOAT | m/s | Yes | Wind speed |
+| 10 | `rainfall` | TO BE FILLED IN *(not included in the current 7-column standard contract and not yet collected by the current pipeline)* | TO BE FILLED IN | TO BE FILLED IN | Rainfall amount |
+| 11 | `hour` | TO BE FILLED IN *(experimented with in the baseline notebook by extracting it from the timestamp, but not yet included in the Data Pipeline handoff schema)* | Hour (0–23) | TO BE FILLED IN | Hour of day in local time |
+| 12 | `weekday` | TO BE FILLED IN *(experimented with as `dayofweek` in the baseline notebook, but not yet included in the Data Pipeline handoff schema)* | 0–6 | TO BE FILLED IN | Day of the week |
+
+*Note: The current 7 standard columns implemented in `ingest/feature_contract.py` are: `station_id`, `event_time`, `pm25_ug_m3`, `temperature_c`, `relative_humidity_pct`, `wind_speed_m_s`, and `wind_direction_deg`.*
+
+#### 1.3. Data Rules
+
+| Topic | Agreed Approach |
+| :--- | :--- |
+| **Timestamp format** | ISO 8601 (`YYYY-MM-DDTHH:MM:SSZ`) |
+| **Timezone** | UTC (timezone-aware timestamps are mandatory; local timestamps from source systems must be normalized to UTC) |
+| **Missing values** | Preserve `NaN` for numeric fields. Do not impute or silently drop missing values in the schema adapter layer. |
+| **Duplicate records** | Identify records using the composite key `(station_id, event_time)`. Duplicate records are not allowed; raise an error if detected. |
+| **Outliers** | TO BE FILLED IN *(Current code checks physical validity, such as temperature and humidity ranges; non-finite values trigger an error.)* |
+| **Late-arriving data** | Retain late-arriving records; do not silently discard them. Associate them with the corresponding station and `target_time`. The model should calculate errors only when the actual label becomes available. |
+| **Data updates / corrections** | TO BE FILLED IN *(The current MinIO upload process skips duplicate files unless the `--force` flag is used.)* |
+| **Data validation** | Validate schema, data types, primary keys, and hourly timestamp alignment through `ingest/feature_contract.py`; check data completeness and gaps using `verify_vietnam_data.py`. |
+
+#### 1.4. Handoff Between Teams
+
+- **Data Pipeline provides data at:** MinIO bucket `features` (`s3://features/`) or `data/sample/` (`openaq_pm25_hanoi_hcmc.csv`, `openmeteo_weather_hanoi_hcmc.csv`, `beijing_multisite_features.csv`); Beijing Parquet data at `s3://raw/beijing_pm25/`.
+- **AI reads data using:** Pandas / PyArrow (`pd.read_parquet()`, `pd.read_csv()`).
+- **MLOps accesses data using:** MinIO S3 API via Boto3 or a mounted shared volume.
+- **Update frequency:** Hourly.
+- **Confirmation:** Data Pipeline: TO BE FILLED IN | AI: TO BE FILLED IN | MLOps: TO BE FILLED IN
 
 ---
 
-## 3. Feature Table Contract
+## PART 2. AI → MLOPS
 
-**Direction:** Data Pipeline → AI
+### 2. Model Interface Contract
+*Responsible team: AI | Reviewing team: MLOps*
 
-**Purpose:** Define how Data Pipeline provides feature data to the AI team for model training and prediction.
+#### 2.1. Model Information
 
-### 3.1. Table Definition
+| Item | Agreed Approach |
+| :--- | :--- |
+| **Problem type** | PM2.5 Forecasting |
+| **Model algorithm** | - Primary experiment: LightGBM Regressor (`LGBMRegressor`)<br>- Baseline for comparison: Persistence model (uses the current PM2.5 value as the forecast for the future)<br>- Current MLOps mock component: `RandomForestClassifier` trained on the Breast Cancer dataset |
+| **Framework** | LightGBM / Scikit-Learn |
+| **Language / version** | Python 3.11 |
+| **Input features** | Current baseline notebook experiments use: `pm25_ug_m3`, `hour`, `dayofweek`, PM2.5 lags `pm25_lag1`, `pm25_lag2`, `pm25_lag3`, `pm25_lag6`, `pm25_lag12`, `pm25_lag24`, and weather lags (`temperature_c_lag1`, `relative_humidity_pct_lag1`, `wind_speed_m_s_lag1`, `wind_direction_deg_lag1`). Official feature contract for handoff: TO BE FILLED IN. |
+| **Prediction target** | `predicted_pm25_ug_m3` (PM2.5 concentration at the forecast time) |
+| **Forecast horizon** | 1 hour (1-hour-ahead forecast: `target_time = event_time + 1h`) |
+| **Output type** | FLOAT (non-negative real number: `np.maximum(prediction, 0)`) |
+| **Evaluation metrics** | MAE (Mean Absolute Error) and RMSE (Root Mean Squared Error) |
+| **Training frequency** | TO BE FILLED IN |
 
-Proposed table name:
+#### 2.2. Training Interface
 
-`pm25_hourly_features`
+- **Function name:** `train_model(train_data, config=None)` *(proposed in `docs/CONTRACTS.md`; not yet implemented as a separate code module)*
 
-Description:
+**Input:**
 
-An hourly feature table containing air quality and weather information required for PM2.5 forecasting.
+| Parameter | Data type | Description |
+| :--- | :--- | :--- |
+| `train_data` | DataFrame | Training dataset containing features and target |
+| `config` | DICT / TO BE FILLED IN | Model training configuration (optional hyperparameters) |
 
-| Property | Proposed Definition |
-|---|---|
-| Table name | `pm25_hourly_features` |
-| Data format | Parquet |
-| Update frequency | Every hour |
-| Timestamp format | ISO 8601 |
-| Timezone | UTC |
-| Row granularity | One station per observation time |
+**Output:**
 
-Status: Proposed - Pending Data Pipeline and AI agreement.
+| Field | Data type | Description |
+| :--- | :--- | :--- |
+| `model` | OBJECT | Trained model |
+| `metrics` | DICT | Evaluation results on the test set (MAE, RMSE, etc.) |
+| `params` | DICT / TO BE FILLED IN | Hyperparameters used |
 
-### 3.2. Feature Schema
+**Training conventions:**
 
-The following schema is an initial example for discussion.
+- **Train/test split:** Time-based split (split chronologically; define a cutoff between training and test data; do not split randomly).
+- **Shuffle:** Disabled (`shuffle=False`) to prevent time-series leakage.
+- **Random seed:** `42`
+- **Model storage:** MLflow Model format (`mlflow.sklearn.log_model` or the corresponding flavor).
 
-| Column Name | Data Type | Unit | Description |
-|---|---|---|---|
-| `station_id` | STRING | - | Monitoring station identifier |
-| `event_time` | TIMESTAMP | UTC | Observation timestamp |
-| `pm25_ug_m3` | FLOAT | µg/m³ | Historical PM2.5 measurement |
-| `temperature_c` | FLOAT | °C | Air temperature |
-| `relative_humidity_pct` | FLOAT | % | Relative humidity |
-| `wind_speed_m_s` | FLOAT | m/s | Wind speed |
-| `wind_direction_deg` | FLOAT | Degree | Wind direction |
+#### 2.3. Prediction Interface
 
-Additional features may be added after discussion with the AI team.
+- **Function name:** `predict(model, input_data)` *(proposed in `docs/CONTRACTS.md`; not yet implemented as a separate module)*
 
-The final feature list must be based on actual source data availability.
+| Item | Agreed Approach |
+| :--- | :--- |
+| **Input schema** | TO BE FILLED IN *(Current serving implementation accepts 30 dummy Breast Cancer features; the PM2.5 schema has not yet been finalized.)* |
+| **Input format** | JSON / DataFrame |
+| **Output schema** | `station_id` (STRING), `target_time` (TIMESTAMP), `predicted_pm25_ug_m3` (FLOAT), `model_version` (STRING) *(as proposed in `docs/CONTRACTS.md`)* |
+| **Output format** | JSON |
+| **Batch prediction** | Supported |
+| **Missing feature handling** | TO BE FILLED IN |
 
-### 3.3. Sample Feature Data
-
-Example:
-
-```csv
-station_id,event_time,pm25_ug_m3,temperature_c,relative_humidity_pct,wind_speed_m_s,wind_direction_deg
-HN001,2026-11-13T08:00:00Z,25.4,30.5,75.0,2.1,180.0
-HN001,2026-11-13T09:00:00Z,27.2,31.0,72.0,2.3,185.0
-HN001,2026-11-13T10:00:00Z,29.1,31.8,70.0,2.5,190.0
-```
-
-This sample allows the AI team to start implementing data loading, preprocessing, feature validation, and training without waiting for the real pipeline.
-
-### 3.4. Timestamp and Update Frequency
-
-Proposed rules:
-
-- All timestamps use UTC.
-- The timestamp format follows ISO 8601.
-- Feature data is updated hourly.
-- Each row represents one station at one observation time.
-- Duplicate records should be identifiable using `station_id` and `event_time`.
-
-### 3.5. Late Label Delivery
-
-The model requires actual PM2.5 values to compare against previous predictions.
-
-Feature data and actual labels must be distinguished.
-
-Proposed label table:
-
-`pm25_actual_labels`
-
-| Column Name | Data Type | Description |
-|---|---|---|
-| `station_id` | STRING | Monitoring station identifier |
-| `target_time` | TIMESTAMP | Time of the actual observation |
-| `actual_pm25_ug_m3` | FLOAT | Actual PM2.5 value |
-| `label_available_at` | TIMESTAMP | Time when the actual label becomes available |
-
-Example:
+**Example input:**
 
 ```json
-{
-  "station_id": "HN001",
-  "target_time": "2026-11-13T09:00:00Z",
-  "actual_pm25_ug_m3": 27.2,
-  "label_available_at": "2026-11-13T09:15:00Z"
-}
+{"pm25": 35.2, "pm25_lag_1h": 32.1}
 ```
 
-Proposed handling:
+**Example output:**
 
-- Late labels must be retained rather than silently discarded.
-- Each label must be linked to its corresponding station and target time.
-- Previously generated predictions must be retained for later evaluation.
-- Model errors should only be calculated when the corresponding actual label becomes available.
-
-The maximum label delay and update mechanism are TBD.
-
-### 3.6. Responsibilities
-
-**Data Pipeline provides:**
-
-- Hourly feature table.
-- Feature schema and data types.
-- Timestamp information.
-- Actual labels when available.
-- Data quality information.
-
-**AI requires:**
-
-- Stable feature names and types.
-- Historical data for training.
-- New feature data for prediction and model updating.
-- Actual labels for model evaluation.
-
-**Open questions:**
-
-- Is the prediction horizon one hour or another interval?
-- Which features are mandatory?
-- How are missing observations handled?
-- How are late labels delivered?
-- Where will the feature table be stored and accessed?
-
----
-
-### 3.7. Historical Raw Storage
-
-Historical ingestion uses the shared MinIO service at `http://minio:9000`
-inside Compose (`http://localhost:9000` from the host).
-
-- Buckets: `raw`, `staging`, `features`, `models`, plus the existing MLOps `mlflow` bucket.
-- Beijing: `s3://raw/beijing_pm25/year=<UTC year>/station_id=<id>/data.parquet`.
-- Elec2: `s3://raw/elec2/elec2.parquet` (a separate classification benchmark).
-- Dataset manifests: `s3://raw/<dataset>/manifest.json`.
-- Beijing retains the seven columns in §3.2. Partition years are derived after
-  converting timestamps to UTC. Numeric missing values remain missing.
-- Compose initializes MinIO and buckets only. Dataset preparation/upload is a
-  manual Python CLI operation; a new MinIO instance initially has empty buckets.
-- The uploader publishes Parquet files before its manifest; consumers should read
-  manifest-listed files after a successful upload.
-- Repeated uploads skip existing objects. Replacing a different dataset requires
-  `--force`. Uploads are not transactional.
-
-See [Storage layout](STORAGE_LAYOUT.md) for source versions, timestamp assumptions,
-reader examples and operational details. Existing feature/model schemas and the
-proposed downstream feature/label interfaces remain unchanged.
-
----
-
-## 4. Model Interface Contract
-
-**Direction:** AI → MLOps
-
-**Purpose:** Define how the AI team hands trained models to MLOps for registration, deployment, and serving.
-
-### 4.1. Training Interface
-
-Proposed function signature:
-
-```python
-def train_model(train_data, config=None):
-    """
-    Train a PM2.5 forecasting model.
-
-    Args:
-        train_data: Training dataset containing features and target.
-        config: Optional training configuration.
-
-    Returns:
-        A result containing the trained model and evaluation metrics.
-    """
-    pass
+```json
+{"prediction": 36.5}
 ```
 
-Expected inputs:
+#### 2.4. Model Artifact
 
-- Training features.
-- Target values.
-- Optional model parameters.
+| Item | Agreed Approach |
+| :--- | :--- |
+| **Model format** | MLflow Model format |
+| **Artifact storage** | MinIO S3 (`s3://mlflow/` or `s3://models/`) |
+| **Model serialization** | MLflow flavors (cloudpickle / joblib through `mlflow.sklearn` or `mlflow.lightgbm`) |
+| **Model signature** | Mandatory (inferred using `mlflow.models.infer_signature`) |
+| **Dependencies** | `requirements.txt` / `conda.yaml` generated automatically by MLflow, and the project lockfile `requirements-py311.lock` |
+| **Required metadata** | `model_name`, `model_version`, `training_timestamp`, `dataset_version`, `model_strategy`, `feature_schema_version`, `mae`, `rmse`, `r2` |
 
-Expected outputs:
+#### 2.5. Model Evaluation & Acceptance
 
-- Trained model.
-- Training parameters.
-- Evaluation metrics.
-- Training metadata.
+| Criterion | Requirement |
+| :--- | :--- |
+| **Evaluation metrics** | MAE (µg/m³), RMSE (µg/m³) |
+| **Baseline model** | Persistence model |
+| **Acceptance condition** | Must outperform the baseline model (lower MAE and RMSE than the Persistence model) |
+| **Comparison with champion** | TO BE FILLED IN *(No specific improvement threshold has been defined yet.)* |
+| **Model approver** | TO BE FILLED IN |
 
-### 4.2. Prediction Interface
+**AI handoff to MLOps:**
 
-Proposed function signature:
+- [x] Model artifact
+- [x] Model signature
+- [x] Training parameters
+- [x] Evaluation metrics
+- [x] Dataset version / reference
+- [x] Source code / Git commit
+- [ ] Instructions for loading and predicting *(TO BE FILLED IN)*
+- [ ] Test input/output examples *(TO BE FILLED IN)*
 
-```python
-def predict(model, input_data):
-    """
-    Generate PM2.5 predictions.
-
-    Args:
-        model: Loaded trained model.
-        input_data: Feature data for prediction.
-
-    Returns:
-        Prediction results.
-    """
-    pass
-```
-
-Expected prediction output:
-
-| Field | Data Type | Description |
-|---|---|---|
-| `station_id` | STRING | Monitoring station |
-| `target_time` | TIMESTAMP | Forecast target time |
-| `predicted_pm25_ug_m3` | FLOAT | Predicted PM2.5 value |
-| `model_version` | STRING | Model version used |
-
-The final function signatures and input/output schema must be confirmed by AI and MLOps.
-
-### 4.3. Model File Format
-
-Proposed standard:
-
-**MLflow Model format**
-
-The AI team should provide a model that can be logged and loaded using MLflow.
-
-The model package should include:
-
-- Model artifact.
-- Model signature.
-- Input example.
-- Required preprocessing components.
-- Model parameters and metadata.
-- Evaluation results.
-
-The exact MLflow flavor depends on the model implementation.
-
-Standalone `.pkl` or `.joblib` files may be used for local experiments but should not be the only agreed integration interface.
-
-### 4.4. MLflow Registration
-
-Proposed registered model name:
-
-`pm25-forecasting`
-
-Suggested experiment name:
-
-`pm25_forecasting`
-
-Expected workflow:
-
-1. AI trains a candidate model.
-2. Training parameters and metrics are logged to MLflow.
-3. Model artifacts are logged.
-4. The model is registered under `pm25-forecasting`.
-5. MLOps can load the registered model for validation and serving.
-6. The approved model is assigned the production alias.
-
-Example MLflow model URI:
-
-```text
-models:/pm25-forecasting/1
-```
-
-Example alias:
-
-```text
-models:/pm25-forecasting@champion
-```
-
-### 4.5. Model Metadata
-
-Each registered model should provide:
-
-| Metadata | Description |
-|---|---|
-| `model_name` | Registered model name |
-| `model_version` | Model version |
-| `training_timestamp` | Training time |
-| `dataset_version` | Training dataset version |
-| `model_strategy` | Periodic, Drift-triggered, or Continuous |
-| `feature_schema_version` | Input feature schema |
-| `mae` | Mean Absolute Error |
-| `rmse` | Root Mean Squared Error |
-| `r2` | R-squared score |
-
-### 4.6. Responsibilities
-
-**AI provides:**
-
-- Training and prediction functions.
-- Model artifact.
-- Input/output schema.
-- Model evaluation results.
-- Model metadata.
-
-**MLOps provides:**
-
-- MLflow tracking and registry.
-- Model version management.
-- Model loading and serving.
-- Deployment and rollback mechanisms.
-
-**Open questions:**
-
-- Will AI or MLOps own the model registration operation?
-- Which MLflow flavor will be used?
-- What metadata is mandatory?
-- How will candidate models be promoted?
-- What are the acceptance criteria for deployment?
+*Confirmation: AI: TO BE FILLED IN | MLOps: TO BE FILLED IN*
 
 ---
 
-## 5. Metrics Contract
+## PART 3. MLOPS
 
-**Direction:** MLOps → All Teams
+### 3. Model Registry Contract
+*Responsible team: MLOps | Reviewing team: AI*
 
-**Purpose:** Define consistent metric names, types, units, and meanings for model monitoring and experimental comparison.
+#### 3.1. MLflow Configuration
 
-### 5.1. Prediction Error Metrics
+| Item | Agreed Approach |
+| :--- | :--- |
+| **MLflow Tracking URI** | `http://mlflow:5000` (inside Docker) or `http://localhost:5000` (host) |
+| **Backend Store** | PostgreSQL (`postgresql+psycopg2://mlflow:mlflow123@postgres:5432/mlflow`) |
+| **Artifact Store** | MinIO (`s3://mlflow/` with endpoint `http://minio:9000`) |
+| **Experiment name** | `pm25_forecasting` *(proposed in `docs/CONTRACTS.md`; current mock code uses `adaptive-model-updating`)* |
+| **Registered model name** | `pm25-forecasting` *(proposed in `docs/CONTRACTS.md`; current mock code uses `BreastCancerRandomForest`)* |
+| **Model versioning** | MLflow version number (auto-incremented: 1, 2, 3, ...) |
+| **Model artifact format** | MLflow Model |
+| **Model signature** | Mandatory |
 
-These metrics evaluate model predictions against actual PM2.5 measurements.
+#### 3.2. Naming Conventions
 
-| Metric Name | Type | Unit | Description |
-|---|---|---|---|
-| `prediction_mae` | Gauge | µg/m³ | Mean absolute prediction error |
-| `prediction_rmse` | Gauge | µg/m³ | Root mean squared prediction error |
+| Object | Naming convention | Example |
+| :--- | :--- | :--- |
+| **Experiment** | snake_case | `pm25_forecasting` |
+| **Registered model** | kebab-case | `pm25-forecasting` |
+| **Model version** | Auto-incrementing integer | `1`, `2` |
+| **Run name** | `<model_type>-<purpose>` | `lightgbm-baseline`, `random-forest-baseline` |
+| **Artifact** | MLflow Model standard | `model/model.pkl`, `MLmodel` |
 
-Rules:
+#### 3.3. Model Lifecycle
 
-- Calculate errors only when actual labels are available.
-- Use the agreed evaluation window.
-- Include the model version and update strategy in the metric labels.
-- Do not treat unavailable labels as zero.
+| State / Alias | Meaning | Transition condition |
+| :--- | :--- | :--- |
+| **Candidate** | A newly logged and registered model awaiting evaluation | Successfully registered in MLflow Registry |
+| **Champion** *(alias `@champion`)* | The model currently serving production traffic | Meets evaluation criteria and outperforms the current model |
+| **Archived** | A previous model that is no longer serving | When a Candidate is assigned the `champion` alias, the previous model loses the `champion` alias and is retained in MLflow history as archived |
 
-### 5.2. Drift Metrics and Alerts
+**Approval workflow for a new model:**
 
-| Metric Name | Type | Unit | Description |
-|---|---|---|---|
-| `drift_alerts_total` | Counter | Events | Total detected drift alerts |
-| `drift_score` | Gauge | Score | Drift score for the monitored feature |
+1. AI completes model training.
+2. The model is logged to MLflow with parameters, metrics, signature, and artifact.
+3. MLOps validates the artifact and signature.
+4. AI and MLOps evaluate the results against the baseline and champion.
+5. An accepted model is assigned the `champion` alias.
+6. Serving loads and uses the new model.
 
-Drift alert information should include:
-
-- Feature name.
-- Drift detection method.
-- Drift score.
-- Detection timestamp.
-- Drift type.
-- Model version, when applicable.
-
-### 5.3. Model Retraining Metrics
-
-| Metric Name | Type | Unit | Description |
-|---|---|---|---|
-| `model_retrain_events_total` | Counter | Events | Total model retraining or updating events |
-| `model_retrain_duration_seconds` | Histogram | Seconds | Duration of each update operation |
-
-Each retraining event should record:
-
-- Model name.
-- Previous model version.
-- New model version, if successful.
-- Update strategy.
-- Update trigger.
-- Start and end timestamps.
-- Training status.
-
-### 5.4. Resource Usage Metrics
-
-| Metric Name | Type | Unit | Description |
-|---|---|---|---|
-| `model_update_cpu_seconds_total` | Counter | CPU seconds | CPU time consumed by model updating |
-| `process_resident_memory_bytes` | Gauge | Bytes | Current process memory usage |
-
-Resource metrics should be recorded consistently across the three updating strategies.
-
-### 5.5. Common Metric Labels
-
-The following labels are proposed:
-
-| Label | Description |
-|---|---|
-| `model_name` | Model identifier |
-| `model_version` | Model version |
-| `strategy` | Updating strategy |
-| `feature_name` | Monitored feature, when applicable |
-| `method` | Drift detection method, when applicable |
-
-Avoid using high-cardinality labels such as unique request IDs.
-
-### 5.6. Responsibilities
-
-**MLOps provides:**
-
-- Metric collection and exposure.
-- Monitoring dashboards.
-- Drift and retraining event tracking.
-- CPU and memory measurements.
-- Consistent metric naming and units.
-
-**AI requires:**
-
-- Model error metrics.
-- Drift information.
-- Retraining event information.
-- Results for experimental comparison.
-
-**Data Pipeline requires:**
-
-- Data pipeline and data quality monitoring.
-- Information about missing or delayed data.
-- Visibility into data delivery and processing status.
-
-**Open questions:**
-
-- What is the agreed evaluation window?
-- How often are prediction errors calculated?
-- Which drift methods and scores are exposed?
-- How are retraining failures recorded?
-- Are CPU and memory measured per process, container, or experiment?
+**Authorized approvers:** Nguyet and Khiem, Nhi
 
 ---
 
-## 6. Mock and Sample Data
+## PART 4. MLOPS → AI / DATA PIPELINE
 
-All teams should be able to develop independently using sample data or mock implementations.
+### 4. Model Serving Contract
+*Responsible team: MLOps | Consumer teams: AI, Data Pipeline*
 
-Suggested files:
+#### 4.1. API Configuration
 
-```text
-data/
-└── sample/
-    ├── feature_sample.csv
-    ├── labels_sample.csv
-    ├── prediction_sample.json
-    ├── drift_event_sample.json
-    └── metrics_sample.json
-```
+| Item | Agreed Information |
+| :--- | :--- |
+| **Service name** | Prediction API *(Swagger title in `serving/main.py`: "Prediction API")* |
+| **API framework** | FastAPI |
+| **Base URL** | `http://localhost:8000` (host) or `http://api:8000` (inside Docker) |
+| **Port** | 8000 |
+| **API endpoints** | `/predict` (prediction), `/health` (health check), `/docs` (Swagger UI) |
+| **HTTP methods** | POST (`/predict`), GET (`/health`, `/`) |
+| **Content-Type** | `application/json` |
+| **Authentication** | None (internal Docker network phase) |
+| **Timeout** | 30 seconds |
 
-Suggested mock implementations:
+#### 4.2. API Request
 
-```text
-models/
-├── train.py
-├── predict.py
-└── mock_model.py
-```
+*(The current `serving/main.py` accepts `PredictionRequest(features: list[list[float]])` for the dummy Breast Cancer model. The official format based on the template still needs to be agreed as follows:)*
 
-### Development Rules
+| Field | Data type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `model_name` | STRING | TO BE FILLED IN *(The current API reads `MODEL_NAME` from an environment variable.)* | Name of the model used for prediction |
+| `features` | OBJECT / ARRAY | Yes | Input data for prediction |
+| `timestamp` | STRING | TO BE FILLED IN *(The current serving schema does not include a timestamp field.)* | Timestamp when the request is submitted |
 
-**Data Pipeline:**
+#### 4.3. API Response
 
-- Provides sample feature and label data.
-- Maintains the agreed schema.
+*(The current `serving/main.py` returns `model_name: str` and `predictions: list[int]`. The following fields are part of the proposed template:)*
 
-**AI:**
+| Field | Data type | Description |
+| :--- | :--- | :--- |
+| `model_name` | STRING | Name of the model serving the prediction |
+| `model_version` | STRING | TO BE FILLED IN *(Not currently included in the response.)* |
+| `prediction` | FLOAT | TO BE FILLED IN *(The current response returns a list of integers from the dummy classification model.)* |
+| `request_id` | STRING | TO BE FILLED IN *(Not currently included in the response.)* |
+| `status` | STRING | TO BE FILLED IN *(A `status` field currently exists only in the `/health` endpoint.)* |
 
-- Uses sample feature data for training and prediction development.
-- Provides mock predictions and drift events when needed.
+#### 4.4. Error Handling
 
-**MLOps:**
+| HTTP status | Scenario | Handling |
+| :--- | :--- | :--- |
+| **400** | Invalid input | TO BE FILLED IN *(No custom 400 handler currently exists in `serving/main.py`.)* |
+| **404** | Model not found | TO BE FILLED IN |
+| **422** | Invalid schema / Unprocessable Entity | Return detailed schema-validation errors from FastAPI/Pydantic (or when the feature dimensionality does not match the expected input). |
+| **500** | Internal error | Catch the exception, log the system error, and return `{"detail": str(exc)}`. |
+| **503** | Model unavailable | Return `{"detail": "Model is not loaded"}` when the model has not been initialized successfully. |
 
-- Uses a mock model to test MLflow and FastAPI.
-- Uses mock metrics to develop monitoring dashboards.
+#### 4.5. Model Loading
 
-When real components become available, they should replace the mock implementations without changing the agreed interfaces unless all affected teams approve the change.
+| Item | Approach |
+| :--- | :--- |
+| **Load model from** | MLflow Model Registry using URI `models:/{MODEL_NAME}@{MODEL_ALIAS}` or `MODEL_URI` |
+| **Model version selection** | Through the model alias (default: `champion`) or the `MODEL_ALIAS` environment variable |
+| **Model alias** | `champion` |
+| **Reload after a new version is available** | Call `POST /reload` on the service or restart the API container. |
+| **Model rollback** | MLOps changes the `champion` alias in the MLflow UI to the desired previous version and calls `POST /reload`. |
 
----
-
-## 7. Team Approval
-
-This document must be reviewed and approved by at least one member from each team.
-
-| Team | Reviewer | Approval Status |
-|---|---|---|
-| Data Pipeline | TBD | Pending |
-| AI | TBD | Pending |
-| MLOps | TBD | Pending |
-
-Approval must be provided through GitHub Pull Request reviews.
-
----
-
-## 8. Contract Change Management
-
-Any change to an agreed interface must follow this process:
-
-1. Describe the requested change.
-2. Identify affected teams.
-3. Discuss the proposed change.
-4. Record the decision in this document.
-5. Update the relevant implementation or mock.
-6. Submit a Pull Request.
-7. Obtain approval from affected teams.
-
-No team should independently modify an agreed interface without notifying the affected teams.
+*Confirmation: AI: TO BE FILLED IN | MLOps: TO BE FILLED IN*
 
 ---
 
-## 9. Definition of Done
+## PART 5. ALL TEAMS
 
-This contract task is complete when:
+### 5. Monitoring & Observability Contract
+*Infrastructure owner: MLOps | Signal providers: AI, Data Pipeline*
 
-- Feature Table Contract is defined.
-- Model Interface Contract is defined.
-- Metrics Contract is defined.
-- All teams can develop using sample data or mock implementations.
-- `CONTRACTS.md` is merged into the main branch.
-- At least one member from Data Pipeline, AI, and MLOps has approved the Pull Request.
+#### 5.1. Monitoring Metrics
 
-**End of Document**
+| Metric name | Description | Unit | Responsible team | Implementation status in source code |
+| :--- | :--- | :--- | :--- | :--- |
+| `model_prediction_error` *(demo code: `prediction_error`)* | Absolute error between the prediction and actual label: `abs(prediction - actual)` | µg/m³ (Histogram) | AI / MLOps | **IMPLEMENTED IN CODE** (`infra/observability/metrics_demo.py`) |
+| `model_mae` | Mean Absolute Error over the observation window | µg/m³ (Gauge) | AI | TO BE FILLED IN *(Calculated in Grafana using PromQL: `sum(rate(prediction_error_sum[1m])) / sum(rate(prediction_error_count[1m]))`; not directly exported as a metric.)* |
+| `model_rmse` | Root Mean Squared Error over the observation window | µg/m³ (Gauge) | AI | TO BE FILLED IN *(Not implemented in code yet.)* |
+| `drift_detected_total` *(docs: `drift_alerts_total`)* | Total number of detected data or concept drift alerts | Events (Counter) | AI | TO BE FILLED IN *(Proposed in documentation; no code implementation yet.)* |
+| `model_retrain_total` *(docs: `retrain_events_total`)* | Total number of model update / retraining events | Events (Counter) | MLOps | TO BE FILLED IN *(Proposed in documentation; no code implementation yet.)* |
+| `model_retrain_duration_seconds` | Duration of a retraining run | Seconds (Histogram) | MLOps | TO BE FILLED IN *(Not implemented in code yet.)* |
+| `model_prediction_duration_seconds` | Processing time for one model prediction | Seconds (Histogram) | MLOps | TO BE FILLED IN *(Not implemented in code yet.)* |
+| `model_predictions_total` | Total number of predictions made | Requests (Counter) | MLOps | TO BE FILLED IN *(Not implemented in code yet.)* |
+| `process_cpu_seconds_total` | Total CPU time consumed by the process | Seconds (Counter) | MLOps | TO BE FILLED IN *(Proposed in documentation; not exported in code yet.)* |
+| `process_resident_memory_bytes` | Resident RAM currently used by the process | Bytes (Gauge) | MLOps | TO BE FILLED IN *(Proposed in documentation; not exported in code yet.)* |
+| `data_missing_rate` | Proportion of missing data in a batch or time window | % (Gauge) | Data Pipeline | TO BE FILLED IN *(Not implemented in code yet.)* |
+| `data_late_records_total` | Total number of records arriving later than their expected time | Records (Counter) | Data Pipeline | TO BE FILLED IN *(Not implemented in code yet.)* |
+
+#### 5.2. Metric Labels
+
+| Label | Data type | Description |
+| :--- | :--- | :--- |
+| `model_name` | STRING | Model identifier (already used in `metrics_demo.py`) |
+| `model_version` | STRING | Model version (TO BE FILLED IN for the application implementation) |
+| `environment` | STRING | Deployment environment (`demo`, `staging`, `production`) |
+| `station_id` | STRING | Monitoring station identifier (TO BE FILLED IN for the application implementation) |
+
+- **Metric collection interval:** Prometheus scrape interval: `5s` (`infra/observability/prometheus.yml`); export interval: `2000ms` (`metrics_demo.py`).
+- **Monitoring stack:** Python OpenTelemetry SDK → OpenTelemetry Collector (`otel-collector:4317` gRPC / `8889` Prometheus exporter) → Prometheus (`prometheus:9090`) → Grafana (`grafana:3000`).
+- **Dashboard location:** Grafana provisioned dashboard `prediction-error.json` at `http://localhost:3000` (UID: `prediction-error-provisioned`).
+
+#### 5.3. Alert Rules
+
+| Alert name | Trigger condition | Responsible team | Action |
+| :--- | :--- | :--- | :--- |
+| **High prediction error** | TO BE FILLED IN | AI | TO BE FILLED IN |
+| **Drift detected** | TO BE FILLED IN | AI | TO BE FILLED IN |
+| **Retraining failed** | TO BE FILLED IN | MLOps | TO BE FILLED IN |
+| **High CPU usage** | TO BE FILLED IN | MLOps | TO BE FILLED IN |
+| **High memory usage** | TO BE FILLED IN | MLOps | TO BE FILLED IN |
+| **Data quality issue** | TO BE FILLED IN | Data Pipeline | TO BE FILLED IN |
 
 ---
 
-## Metrics naming contract - Observability stack skeleton
+## PART 6. AI ↔ MLOPS
 
-Status: Proposed — awaiting team approval.
+### 6. Drift Detection & Retraining Contract
 
-Transport: Python OpenTelemetry SDK → OpenTelemetry Collector
-→ Prometheus → Grafana.
+#### 6.1. Drift Event
 
-### Metric names
+- **Drift detection team:** AI
+- **Event receiving team:** MLOps
 
-| Prometheus metric | Type | Unit | Meaning |
-|---|---|---|---|
-| prediction_error | Histogram | Target units | Absolute error: abs(prediction - actual label) |
-| feature_drift_psi | Gauge | Dimensionless | Feature distribution drift measured using PSI |
-| drift_alerts_total | Counter | Transitions | Number of transitions into an active drift alert |
-| retrain_events_total | Counter | Events | Retraining lifecycle events |
-| process_cpu_seconds_total | Counter | Seconds | Cumulative user and system CPU time of the instrumented process |
-| process_resident_memory_bytes | Gauge | Bytes | Current resident memory of the instrumented process |
+*(In the current source code, the `drift/` directory contains only `.gitkeep`. Drift detection experiments are in the Jupyter notebook `notebooks/Elec2_Label_Based_Drift_Detection.ipynb`, using River ADWIN/DDM on the Elec2 dataset. The event payload schema has not yet been standardized for message-queue transmission.)*
 
-### Naming conventions
+| Field | Data type | Description |
+| :--- | :--- | :--- |
+| `event_id` | STRING | TO BE FILLED IN |
+| `event_type` | STRING | TO BE FILLED IN |
+| `model_name` | STRING | TO BE FILLED IN |
+| `model_version` | STRING | TO BE FILLED IN |
+| `detector` | STRING | TO BE FILLED IN *(Experiments use `ADWIN` and `DDM`.)* |
+| `drift_type` | STRING | TO BE FILLED IN *(Experiments focus on label / performance drift.)* |
+| `timestamp` | TIMESTAMP | TO BE FILLED IN |
+| `trigger_retraining` | BOOLEAN | TO BE FILLED IN |
 
-- Use lowercase snake_case for metric names.
-- Prometheus counters end in `_total`.
-- Include base units in names where applicable:
-  `_seconds` for time and `_bytes` for memory.
-- OpenTelemetry counter instrument names omit `_total`;
-  the Prometheus exporter adds the suffix.
-- The `prediction_error` histogram exposes:
-  - `prediction_error_bucket`
-  - `prediction_error_sum`
-  - `prediction_error_count`
+#### 6.2. Retraining Policy
 
-### Labels - Observability stack skeleton
+| Item | Agreed Approach |
+| :--- | :--- |
+| **Retraining trigger** | TO BE FILLED IN |
+| **Drift threshold** | TO BE FILLED IN *(The Elec2 notebook experiments use `ADWIN(delta=0.002)` and `DDM(warm_start=30)`.)* |
+| **Periodic retraining** | TO BE FILLED IN |
+| **Drift-triggered retraining** | TO BE FILLED IN |
+| **Label delay** | TO BE FILLED IN *(Marked as TBD in `docs/CONTRACTS.md`.)* |
+| **Minimum training samples** | TO BE FILLED IN *(The Elec2 notebook uses a window of 2,000 samples; no PM2.5 requirement has been defined yet.)* |
+| **Retraining dataset window** | TO BE FILLED IN |
+| **Retraining frequency** | TO BE FILLED IN |
+| **Retraining failure handling** | TO BE FILLED IN |
 
-- Model metrics use `model_name` and `environment`.
-- Drift metrics additionally use `feature`.
-- Retrain events additionally use:
-  - `trigger`: `scheduled`, `drift`, `manual`
-  - `status`: `started`, `succeeded`, `failed`
-- Prometheus supplies `job` and `instance`.
-- Do not use entity IDs, request IDs, timestamps or raw error
-  messages as metric labels.
+#### 6.3. Model Replacement
 
-### Measurement rules
+| Item | Requirement |
+| :--- | :--- |
+| **New model evaluator(s)** | TO BE FILLED IN |
+| **Comparison with current model** | TO BE FILLED IN |
+| **Acceptance criteria** | TO BE FILLED IN |
+| **Authority to promote the champion** | TO BE FILLED IN |
+| **Rollback condition** | TO BE FILLED IN |
+| **Retraining history retention** | TO BE FILLED IN |
 
-- Record absolute prediction error once per matched prediction/label pair.
-- Missing labels mean unavailable error data, not zero error.
-- Increment `drift_alerts_total` only when entering an active alert state.
-- Each retrain run emits one started event and one terminal event:
-  succeeded or failed.
-- Count retrain attempts using `status="started"` rather than
-  summing all statuses.
-- CPU and memory describe the instrumented process, not the whole host.
-- Counter values may reset when the process restarts;
-  use `rate()` or `increase()` for time-window calculations.
+#### 6.4. Retraining Workflow
 
-### Dashboard query
+1. AI detects drift.
+2. AI publishes a drift event.
+3. MLOps records the event.
+4. The policy determines whether retraining is required.
+5. AI performs model training.
+6. MLOps logs and registers the model.
+7. AI and MLOps evaluate the new model.
+8. MLOps deploys the new model or rolls back.
 
-Mean absolute prediction error over the last minute:
+*(Current status: TO BE FILLED IN – This workflow has not yet been implemented as an automated process.)*
 
-    sum(rate(prediction_error_sum[1m]))
-    /
-    sum(rate(prediction_error_count[1m]))
+---
 
-### Implementation status
+## PART 7. INTEGRATION & WORKING AGREEMENT
 
-The current demo implements only `prediction_error`, using synthetic
-normalized targets. Other metrics are proposed for future integration.
+### 7. Inter-Team Working Rules
 
-### Required approvals
+#### 7.1. Parallel Development
 
-- [ ] Data Pipeline representative
-- [ ] AI representative
-- [ ] MLOps representative
-### End Observability stack skeleton.
+| Team | Mock component used | Actual component to be delivered |
+| :--- | :--- | :--- |
+| **Data Pipeline** | Sample CSV files (`data/sample/beijing_multisite_features.csv`, `openaq_pm25_hanoi_hcmc.csv`, `openmeteo_weather_hanoi_hcmc.csv`) | Standard Feature Table in MinIO Parquet (`s3://raw/`, `s3://features/`) and the data update pipeline |
+| **AI** | Sample features / dummy data (`data/sample/*.csv`) | Model training script (`models/train.py`) and drift detection code |
+| **MLOps** | Dummy sklearn model (`models/dummy_model_mlflow.py`) | Model Registry (MLflow), Serving API (`serving/main.py`), and Monitoring Stack (OTel, Prometheus, Grafana) |
+
+#### 7.2. Repository Conventions
+
+*(Based on `CONTRIBUTING.md` and `docs/CONTRACTS.md`.)*
+
+| Item | Rule |
+| :--- | :--- |
+| **Branch naming** | Format: `<type>/<short-description>`. Types: `feat`, `fix`, `docs`, `test`, `ci`, `chore`, `refactor` (lowercase and concise). Example: `feat/kafka-ingestion` |
+| **Commit format** | Conventional Commits: `<type>(<scope>): <description>`. Example: `feat(ingest): add Kafka producer`, `fix(models): correct evaluation` |
+| **Pull Request template** | Use the configured template at `.github/PULL_REQUEST_TEMPLATE.md`. |
+| **Minimum reviewers** | At least one other team member must approve each Pull Request before it can be merged. |
+| **Code formatting** | Use Ruff (`ruff check .`, `ruff format .`) and pre-commit hooks (`.pre-commit-config.yaml`). |
+| **Testing requirements** | Use Pytest (`pytest -v`). Test files must be located in `tests/` and follow the `test_*.py` naming convention. |
+| **Contract change process** | Follow these 7 steps: (1) Describe the change → (2) Identify affected teams → (3) Discuss the change → (4) Record it in the documentation → (5) Update mocks/code → (6) Create a PR → (7) Obtain approval from affected teams. |
+
+#### 7.3. Integration Testing
+
+| Test case | Expected result | Responsible team | Current status |
+| :--- | :--- | :--- | :--- |
+| **Data Pipeline provides features** | Data can be read with the correct schema | Data Pipeline | **TESTS AVAILABLE** (`tests/test_feature_contract.py`, `tests/test_vietnam_data.py`, `tests/test_vietnam_pipeline.py`) |
+| **AI trains a model** | Model is trained successfully | AI | **EXPERIMENTS AVAILABLE** (`models/pm25-baseline.ipynb` and `models/dummy_model_mlflow.py`) |
+| **MLOps registers a model** | A model version is available in MLflow | MLOps | **TEST AVAILABLE** (`models/register_model.py`) |
+| **API prediction** | Prediction is returned using the correct schema | MLOps | **CODE AVAILABLE** (`serving/main.py` runs with a dummy model) |
+| **Drift event** | MLOps receives the event | AI / MLOps | TO BE FILLED IN *(No integration code yet.)* |
+| **Retraining** | A new model is logged | AI / MLOps | TO BE FILLED IN *(No automated pipeline yet.)* |
+| **Monitoring** | Metrics are displayed in Grafana | MLOps | **TESTED** (OTel/Prometheus/Grafana stack + `prediction-error.json` dashboard + `metrics_demo.py`) |
+
+---
+
+## PART 8. DECISION LOG
+
+### 8. Agreed Decisions
+
+| No. | Topic | Final decision | Confirming teams | Date |
+| :--- | :--- | :--- | :--- | :--- |
+| 1 | **Feature Table** | Standardize 7 columns: `station_id`, `event_time`, `pm25_ug_m3`, `temperature_c`, `relative_humidity_pct`, `wind_speed_m_s`, `wind_direction_deg`. Use UTC ISO 8601 timestamps and store Parquet files in MinIO S3 (`s3://raw/`, `s3://features/`). Do not impute missing values in the adapter layer. | Data Pipeline, AI, MLOps | TO BE FILLED IN |
+| 2 | **Model Interface** | Forecast PM2.5 one hour ahead. LightGBM is the primary experimental model; Persistence is the baseline. Evaluation metrics are MAE and RMSE. Store models in MLflow Model format. | AI, MLOps | TO BE FILLED IN |
+| 3 | **Model Registry** | Use MLflow with PostgreSQL as the backend store and MinIO S3 as the artifact store (`s3://mlflow/`). Use auto-incrementing versions and the `@champion` alias for production serving. | MLOps, AI | TO BE FILLED IN |
+| 4 | **Serving API** | Build the API with FastAPI and package it in Docker. Load the model from MLflow Model Registry through the `@champion` alias. Support `/predict`, `/health`, and `/docs`. | MLOps, AI | TO BE FILLED IN |
+| 5 | **Monitoring Metrics** | Set up Python OpenTelemetry SDK → OTel Collector → Prometheus → Grafana. The first test metric is the `prediction_error` histogram. The Grafana dashboard calculates rolling 1-minute MAE using PromQL. | MLOps, AI, Data Pipeline | TO BE FILLED IN |
+| 6 | **Drift Event** | TO BE FILLED IN *(ADWIN and DDM have only been tested in the Elec2 notebook; the event schema has not yet been agreed.)* | AI, MLOps | TO BE FILLED IN |
+| 7 | **Retraining Policy** | TO BE FILLED IN *(Retraining policy and trigger thresholds have not yet been agreed.)* | AI, MLOps | TO BE FILLED IN |
+
+### Outstanding Issues
+
+| No. | Issue | Responsible team(s) | Deadline |
+| :--- | :--- | :--- | :--- |
+| 1 | Agree on extended Feature Table features (the `pm25_lag_*` columns, `rainfall`, and derived `hour` / `weekday` fields), as well as missing-value and outlier handling policies for the model. | Data Pipeline & AI | TO BE FILLED IN |
+| 2 | Finalize the official Request/Response schema for the PM2.5 Serving API, replacing the current dummy Breast Cancer schema. | MLOps & AI | TO BE FILLED IN |
+| 3 | Finalize the Drift Event schema over the Message Queue (Kafka/Redpanda) and the conditions for triggering automated retraining. | AI & MLOps | TO BE FILLED IN |
+
+---
+
+### Final Approval
+
+| Team | Representative | Approval | Approval date |
+| :--- | :--- | :--- | :--- |
+| **Data Pipeline** | TO BE FILLED IN | ☐ | TO BE FILLED IN |
+| **AI** | TO BE FILLED IN | ☐ | TO BE FILLED IN |
+| **MLOps** | TO BE FILLED IN | ☐ | TO BE FILLED IN |
+
+**Final status:** ☑ Draft  ☐ Under Review  ☐ Approved  ☐ Needs Revision  
+**GitHub PR:** TO BE FILLED IN  
+**Contract completion date:** TO BE FILLED IN
+
+### Definition of Done
+
+- [ ] Each team has completed its assigned sections.
+- [ ] The Feature Table schema has been approved by Data Pipeline and AI.
+- [ ] The Model Interface has been approved by AI and MLOps.
+- [ ] All three teams have agreed on the monitoring metrics.
+- [ ] Serving and Retraining interfaces have been agreed upon.
+- [ ] Mock components can be used independently.
+- [ ] `CONTRACTS.md` has been merged into the repository.
+- [ ] At least one member from each team has approved the agreement.
+"""
+
+output_path = "/mnt/data/inter_team_technical_agreement_en.md"
+pypandoc.convert_text(md, "md", format="md", outputfile=output_path, extra_args=["--standalone"])
+print(f"Created: {output_path}")
