@@ -14,16 +14,10 @@ ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(ENV_PATH)
 
 # Configuration
-MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI")
-MODEL_NAME = os.getenv("MODEL_NAME")
-MODEL_ALIAS = os.getenv("MODEL_ALIAS")
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
+MODEL_NAME = os.getenv("MODEL_NAME", "pm25-forecasting")
+MODEL_ALIAS = os.getenv("MODEL_ALIAS", "champion")
 MODEL_URI = os.getenv("MODEL_URI")
-
-if not MLFLOW_TRACKING_URI:
-    raise RuntimeError("Missing MLFLOW_TRACKING_URI in .env")
-
-if not MODEL_NAME:
-    raise RuntimeError("Missing MODEL_NAME in .env")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
