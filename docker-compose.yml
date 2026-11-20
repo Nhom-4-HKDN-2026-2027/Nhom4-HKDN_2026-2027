@@ -95,6 +95,7 @@ services:
       interval: 5s
       retries: 10
       
+      
   minio-init:
     image: public.ecr.aws/aws-cli/aws-cli:latest
     depends_on:
@@ -195,6 +196,9 @@ services:
       - "8000:8000"
       
 volumes:
+  pgdata: 
+  pgadmin_data:
+  miniodata:
   pgdata: 
   pgadmin_data:
   miniodata:
