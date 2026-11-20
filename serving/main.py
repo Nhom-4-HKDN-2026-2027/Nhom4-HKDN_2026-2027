@@ -36,26 +36,18 @@ model = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global model
-
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-
-    if MODEL_URI:
-        MODEL_URI = MODEL_URI
-    else:
-        MODEL_URI = f"models:/{MODEL_NAME}@{MODEL_ALIAS}"
-
+    # Ưu tiên MODEL_URI nếu có, ngược lại fallback về tên model + alias (mặc định champion)
+    resolved_model_uri = MODEL_URI or f"models:/{MODEL_NAME}@{MODEL_ALIAS or 'champion'}"
     logger.info("MLflow URI: %s", MLFLOW_TRACKING_URI)
-    logger.info("Model URI: %s", MODEL_URI)
-
+    logger.info("Model URI: %s", resolved_model_uri)
     try:
-        model = mlflow.pyfunc.load_model(MODEL_URI)
+        model = mlflow.pyfunc.load_model(resolved_model_uri)
         logger.info("Model loaded successfully")
     except Exception:
         logger.exception("Failed to load model")
         raise
-
     yield
-
     model = None
 
 
@@ -72,60 +64,15 @@ app = FastAPI(
 
 
 class PredictionRequest(BaseModel):
-    features: list[list[float]] = Field(
+    features: list[dict[str, float]] | list[list[float]] = Field(
         ...,
-        description="Danh sách các mẫu dữ liệu, mỗi mẫu gồm đúng 30 features số thực (chuẩn Breast Cancer).",
+        description="Dữ liệu quan trắc đầu vào để dự báo nồng độ PM2.5."
     )
-
-    model_config = {
-        "json_schema_extra": {
-            "examples": [
-                {
-                    "features": [
-                        [
-                            17.99,
-                            10.38,
-                            122.8,
-                            1001.0,
-                            0.1184,
-                            0.2776,
-                            0.3001,
-                            0.1471,
-                            0.2419,
-                            0.07871,
-                            1.095,
-                            0.9053,
-                            8.589,
-                            153.4,
-                            0.006399,
-                            0.04904,
-                            0.05373,
-                            0.01587,
-                            0.03003,
-                            0.006193,
-                            25.38,
-                            17.33,
-                            184.6,
-                            2019.0,
-                            0.1622,
-                            0.6656,
-                            0.7119,
-                            0.2654,
-                            0.4601,
-                            0.1189,
-                        ]
-                    ]
-                }
-            ]
-        }
-    }
 
 
 class PredictionResponse(BaseModel):
-    model_name: str = Field(..., description="Tên model phục vụ dự đoán")
-    predictions: list[int] = Field(
-        ..., description="Danh sách nhãn dự đoán (0: Malignant / Ác tính, 1: Benign / Lành tính)"
-    )
+    model_name: str
+    predictions: list[float] = Field(..., description="Nồng độ PM2.5 dự báo (µg/m³)")
 
 
 # Endpoints
