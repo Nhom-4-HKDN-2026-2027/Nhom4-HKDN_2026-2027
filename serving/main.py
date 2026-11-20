@@ -93,39 +93,28 @@ def health_check():
     }
 
 
-@app.post(
-    "/predict",
-    response_model=PredictionResponse,
-    tags=["Prediction"],
-)
+@app.post("/predict", response_model=PredictionResponse, tags=["Prediction"])
 def predict(request: PredictionRequest):
     if model is None:
-        raise HTTPException(
-            status_code=503,
-            detail="Model is not loaded",
-        )
-
+        raise HTTPException(status_code=503, detail="Model is not loaded")
     try:
-        if any(len(row) != 30 for row in request.features):
-            raise HTTPException(
-                status_code=422,
-                detail="Each sample must contain exactly 30 features",
-            )
-
         input_data = pd.DataFrame(request.features)
-
-        predictions = model.predict(input_data)
-
+        preds = model.predict(input_data)
+        
+        # Ép sang float (PM2.5 không âm)
         return PredictionResponse(
             model_name=MODEL_NAME,
-            predictions=[int(value) for value in predictions],
+            model_alias=MODEL_ALIAS or "champion",
+            predictions=[max(0.0, float(v)) for v in preds]
         )
-
-    except HTTPException:
-        raise
     except Exception as exc:
         logger.exception("Prediction failed")
-        raise HTTPException(
-            status_code=500,
-            detail=str(exc),
-        )
+        raise HTTPException(status_code=500, detail=str(exc))
+
+# /reload GIÚP không cần restart container
+@app.post("/reload", tags=["Management"], summary="Reload model champion mới nhất")
+def reload_model():
+    global model
+    resolved_uri = MODEL_URI or f"models:/{MODEL_NAME}@{MODEL_ALIAS or 'champion'}"
+    model = mlflow.pyfunc.load_model(resolved_uri)
+    return {"status": "reloaded", "model_uri": resolved_uri}

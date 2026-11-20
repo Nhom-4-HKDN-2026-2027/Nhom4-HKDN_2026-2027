@@ -203,7 +203,7 @@
 | :--- | :--- | :--- |
 | **Candidate** | Model mới được log và đăng ký, chờ đánh giá | Đã đăng ký vào MLflow Registry |
 | **Champion** *(Alias `@champion`)* | Model đang phục vụ sản xuất | Đạt tiêu chí đánh giá và vượt qua model hiện tại |
-| **Archived** | Model cũ không còn phục vụ | CẦN ĐIỀN *(Khi có model mới thay thế làm champion)* |
+| **Archived** | Model cũ không còn phục vụ | Khi một model Candidate được gán alias @champion, model cũ tự động mất alias @champion và lưu trữ trạng thái Archived trong lịch sử MLflow |
 
 **Quy trình phê duyệt model mới:**
 1. AI hoàn thành training.
@@ -213,7 +213,7 @@
 5. Model đạt tiêu chí được gán alias `champion`.
 6. Serving nạp và sử dụng model mới.
 
-**Người có quyền phê duyệt:** CẦN ĐIỀN
+**Người có quyền phê duyệt:** Nguyệt và Khiêm, Nhi
 
 ---
 
@@ -233,8 +233,8 @@
 | **API endpoint** | `/predict` (dự đoán), `/health` (kiểm tra trạng thái), `/docs` (Swagger UI) |
 | **HTTP method** | POST (cho `/predict`), GET (cho `/health`, `/`) |
 | **Content-Type** | `application/json` |
-| **Authentication** | CẦN ĐIỀN *(Hiện tại chưa cấu hình auth trong `serving/main.py`)* |
-| **Timeout** | CẦN ĐIỀN |
+| **Authentication** | None (Giai đoạn nội bộ trong Docker network) |
+| **Timeout** | 30 giây |
 
 #### 4.2. API Request
 *(Hiện tại `serving/main.py` nhận `PredictionRequest(features: list[list[float]])` phục vụ dummy model Breast Cancer. Định dạng chuẩn theo template cần được thống nhất lại như sau:)*
@@ -273,8 +273,8 @@
 | **Load model from** | MLflow Model Registry qua URI: `models:/{MODEL_NAME}@{MODEL_ALIAS}` hoặc `MODEL_URI` |
 | **Model version selection** | Thông qua Model Alias (mặc định lấy alias `champion` hoặc biến môi trường `MODEL_ALIAS`) |
 | **Model alias** | `champion` |
-| **Reload model khi có version mới** | CẦN ĐIỀN *(Hiện tại model chỉ load 1 lần lúc startup container qua lifespan event)* |
-| **Rollback model** | CẦN ĐIỀN *(Hiện tại chuyển alias trên MLflow Registry thủ công)* |
+| **Reload model khi có version mới** | Gọi endpoint POST /reload trên Service hoặc restart container api. |
+| **Rollback model** | MLOps chuyển alias @champion trên MLflow UI sang version cũ mong muốn và gọi POST /reload. |
 
 *Xác nhận: AI: CẦN ĐIỀN &nbsp;&nbsp;|&nbsp;&nbsp; MLOps: CẦN ĐIỀN*
 
