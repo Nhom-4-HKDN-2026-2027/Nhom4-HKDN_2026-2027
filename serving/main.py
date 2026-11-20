@@ -65,8 +65,7 @@ app = FastAPI(
 
 class PredictionRequest(BaseModel):
     features: list[dict[str, float]] | list[list[float]] = Field(
-        ...,
-        description="Dữ liệu quan trắc đầu vào để dự báo nồng độ PM2.5."
+        ..., description="Dữ liệu quan trắc đầu vào để dự báo nồng độ PM2.5."
     )
 
 
@@ -100,16 +99,17 @@ def predict(request: PredictionRequest):
     try:
         input_data = pd.DataFrame(request.features)
         preds = model.predict(input_data)
-        
+
         # Ép sang float (PM2.5 không âm)
         return PredictionResponse(
             model_name=MODEL_NAME,
             model_alias=MODEL_ALIAS or "champion",
-            predictions=[max(0.0, float(v)) for v in preds]
+            predictions=[max(0.0, float(v)) for v in preds],
         )
     except Exception as exc:
         logger.exception("Prediction failed")
         raise HTTPException(status_code=500, detail=str(exc))
+
 
 # /reload GIÚP không cần restart container
 @app.post("/reload", tags=["Management"], summary="Reload model champion mới nhất")

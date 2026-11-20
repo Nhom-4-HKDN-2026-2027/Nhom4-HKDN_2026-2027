@@ -1,8 +1,9 @@
 import os
 from pathlib import Path
+
 import mlflow
-from mlflow.tracking import MlflowClient
 from dotenv import load_dotenv
+from mlflow.tracking import MlflowClient
 
 env_path = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(env_path, override=True)
@@ -21,8 +22,6 @@ print(f"Registered {registered_model.name} Version {registered_model.version}")
 # 2. Gán alias @champion vào version vừa tạo
 client = MlflowClient()
 client.set_registered_model_alias(
-    name=model_name,
-    alias=model_alias,
-    version=registered_model.version
+    name=model_name, alias=model_alias, version=registered_model.version
 )
 print(f"--> Gán alias @{model_alias} thành công cho Version {registered_model.version}!")
