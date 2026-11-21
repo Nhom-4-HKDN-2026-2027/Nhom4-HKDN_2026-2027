@@ -1,0 +1,9 @@
+pm25_features:
+  target: dev
+
+  outputs:
+    dev:
+      type: duckdb
+      path: 'pm25_features.duckdb'
+      schema: main
+      threads: 4
