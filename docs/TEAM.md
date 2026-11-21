@@ -43,15 +43,15 @@ Please only modify the checklist under your name to minimize merge conflicts.
 
 ## 4. MinhNguyetDuckoo — Write
 
-- [ ] Install Git
-- [ ] Install Docker Desktop
-- [ ] Install Python 3.11+
-- [ ] Install VS Code
-- [ ] Clone the project repository
-- [ ] Run `docker compose up` successfully
-- [ ] Verify Redpanda is healthy using `docker compose ps`
-- [ ] Create a small Pull Request
-- [ ] Get the Pull Request reviewed and merged into `main`
+- [x] Install Git
+- [x] Install Docker Desktop
+- [x] Install Python 3.11+
+- [x] Install VS Code
+- [x] Clone the project repository
+- [x] Run `docker compose up` successfully
+- [x] Verify Redpanda is healthy using `docker compose ps`
+- [x] Create a small Pull Request
+- [x] Get the Pull Request reviewed and merged into `main`
 
 ## 5. nghiavo966-dotcom — Write
 
@@ -91,15 +91,15 @@ Please only modify the checklist under your name to minimize merge conflicts.
 
 ## 8. Quyen0005 — Write
 
-- [ ] Install Git
-- [ ] Install Docker Desktop
-- [ ] Install Python 3.11+
-- [ ] Install VS Code
-- [ ] Clone the project repository
-- [ ] Run `docker compose up` successfully
-- [ ] Verify Redpanda is healthy using `docker compose ps`
-- [ ] Create a small Pull Request
-- [ ] Get the Pull Request reviewed and merged into `main`
+- [x] Install Git
+- [x] Install Docker Desktop
+- [x] Install Python 3.11+
+- [x] Install VS Code
+- [x] Clone the project repository
+- [x] Run `docker compose up` successfully
+- [x] Verify Redpanda is healthy using `docker compose ps`
+- [x] Create a small Pull Request
+- [x] Get the Pull Request reviewed and merged into `main`
 
 ## 9. trthien123 — Write
 
@@ -115,6 +115,15 @@ Please only modify the checklist under your name to minimize merge conflicts.
 
 ## 10. XuanHuong63 — Write
 
+- [X] Install Git
+- [X] Install Docker Desktop
+- [X] Install Python 3.11+
+- [X] Install VS Code
+- [X] Clone the project repository
+- [X] Run `docker compose up` successfully
+- [X] Verify Redpanda is healthy using `docker compose ps`
+- [X] Create a small Pull Request
+- [X] Get the Pull Request reviewed and merged into `main`
 - [X] Install Git
 - [X] Install Docker Desktop
 - [X] Install Python 3.11+
