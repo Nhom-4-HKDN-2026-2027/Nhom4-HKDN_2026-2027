@@ -25,6 +25,7 @@ def test_beijing_roundtrip(tmp_path):
                     "relative_humidity_pct",
                     "wind_speed_m_s",
                     "wind_direction_deg",
+                    "precipitation_mm",
                 )
             },
         }
@@ -137,6 +138,7 @@ def test_kaggle_archive_years_and_timezone(tmp_path):
             "PM2.5": [10.0, None],
             "TEMP": [10.0, 10.0],
             "DEWP": [10.0, 20.0],
+            "RAIN": [0.0, 1.2],
             "WSPM": [1.0, 2.0],
             "wd": ["N", "NNE"],
         }
@@ -156,6 +158,7 @@ def test_kaggle_archive_years_and_timezone(tmp_path):
             "relative_humidity_pct",
             "wind_speed_m_s",
             "wind_direction_deg",
+            "precipitation_mm",
         ],
     )
     assert frame.station_id.tolist() == ["beijing_Aotizhongxin"] * 2
@@ -164,6 +167,7 @@ def test_kaggle_archive_years_and_timezone(tmp_path):
     assert pd.isna(frame.relative_humidity_pct.iloc[1])
     assert pd.isna(frame.pm25_ug_m3.iloc[1])
     assert frame.wind_direction_deg.tolist() == [0.0, 22.5]
+    assert frame.precipitation_mm.tolist() == [0.0, 1.2]
     manifest = json.loads((directory / "manifest.json").read_text())
     assert manifest["years"] == [2014, 2015]
     assert "kaggle.com" in manifest["source_url"]

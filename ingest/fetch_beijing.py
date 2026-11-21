@@ -37,7 +37,19 @@ STATIONS = (
     "Wanliu",
     "Wanshouxigong",
 )
-SOURCE_COLUMNS = ["year", "month", "day", "hour", "station", "PM2.5", "TEMP", "DEWP", "WSPM", "wd"]
+SOURCE_COLUMNS = [
+    "year",
+    "month",
+    "day",
+    "hour",
+    "station",
+    "PM2.5",
+    "TEMP",
+    "DEWP",
+    "RAIN",
+    "WSPM",
+    "wd",
+]
 COMPASS_DEGREES = {
     name: i * 22.5
     for i, name in enumerate("N NNE NE ENE E ESE SE SSE S SSW SW WSW W WNW NW NNW".split())
@@ -65,7 +77,7 @@ def relative_humidity_from_dewpoint(temperature: pd.Series, dewpoint: pd.Series)
 
 
 def normalize_beijing(frame: pd.DataFrame, source_timezone: str = "Asia/Shanghai") -> pd.DataFrame:
-    """Map source rows to the seven shared contract columns, preserving missing rows."""
+    """Map source rows to the eight shared contract columns, preserving missing rows."""
     missing = set(SOURCE_COLUMNS) - set(frame.columns)
     if missing:
         raise ValueError(f"Beijing source missing columns: {sorted(missing)}")
@@ -87,7 +99,7 @@ def normalize_beijing(frame: pd.DataFrame, source_timezone: str = "Asia/Shanghai
     station = frame["station"].astype("string").str.strip()
     if station.isna().any() or not station.isin(STATIONS).all():
         raise ValueError("Unknown or missing Beijing Multi-Site station")
-    numeric = frame[["PM2.5", "TEMP", "DEWP", "WSPM"]].apply(pd.to_numeric, errors="coerce")
+    numeric = frame[["PM2.5", "TEMP", "DEWP", "RAIN", "WSPM"]].apply(pd.to_numeric, errors="coerce")
     invalid_tokens = frame[numeric.columns].notna() & numeric.isna()
     if invalid_tokens.any().any():
         raise ValueError("Nonnumeric source value; only explicit missing values are allowed")
@@ -108,6 +120,7 @@ def normalize_beijing(frame: pd.DataFrame, source_timezone: str = "Asia/Shanghai
             ),
             "wind_speed_m_s": numeric["WSPM"],
             "wind_direction_deg": degrees,
+            "precipitation_mm": numeric["RAIN"],
         },
         columns=FEATURE_COLUMNS,
     )
