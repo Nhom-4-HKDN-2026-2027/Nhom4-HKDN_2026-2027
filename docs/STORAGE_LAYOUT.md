@@ -1,8 +1,16 @@
 # Historical datasets and MinIO storage
 
-## Start MinIO
+## Start MinIO and populate `raw` (step-by-step order)
 
-Run from the repository root:
+Compose starts MinIO and initializes its five buckets (`raw`, `staging`,
+`features`, `models`, `mlflow`), but it **does not** download, convert or
+upload datasets automatically. A new MinIO instance has an empty `raw` bucket
+until you run the manual ingestion command in **Step 3** below. Existing objects
+persist in the `miniodata` Docker volume.
+
+Run the following steps in order from the repository root:
+
+### Step 1: Start MinIO and verify bucket initialization
 
 ```bash
 docker compose up -d
@@ -10,23 +18,74 @@ docker compose logs minio-init
 docker compose ps -a
 ```
 
-Compose starts MinIO and initializes its buckets; it does not download,
-convert or upload datasets. A new MinIO instance has empty buckets until the
-manual Python command below completes. Existing objects persist in `miniodata`.
-The one-shot `minio-init` exits with code 0 after bucket initialization.
+The one-shot `minio-init` container exits with code `0` after creating any
+missing buckets.
 
-MinIO Console: http://localhost:9001. S3 API: http://localhost:9000
-(containers use http://minio:9000). Local development credentials are documented
-in `.env.example`; use `.env` to override them. Keep AWS credentials aligned
-with MinIO credentials. Grafana uses the team's port 3000.
+### Step 2: Create the Python 3.11 virtual environment and install dependencies
 
-Compose uses the publicly pullable `chainguard/minio:latest` image, which packages
-the MinIO server. The original `minio/minio` Docker Hub image could not be pulled
-on a clean setup. MinIO runs as UID:GID `100:101` to retain access to data created
-by the previous image. Ports 9000/9001, the `miniodata` volume, and the `mc ready
-local` healthcheck remain unchanged. Bucket `mlflow` is preserved; the initializer
-adds `raw`, `staging`, `features` and `models`. There is no custom image build or
-dataset container.
+**Linux / macOS (Bash/Zsh):**
+
+```bash
+python3.11 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements-dev.txt
+```
+
+**Windows (PowerShell):**
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements-dev.txt
+```
+
+### Step 3: Load environment variables and run manual data ingestion into `raw`
+
+`ingest/minio_storage.py` reads MinIO credentials and `MINIO_ENDPOINT` from the
+process environment (`.env` is not loaded automatically). Copy `.env.example`
+to `.env`, load it into your shell session, and run `ingest.historical_datasets --all`:
+
+**Linux / macOS (Bash/Zsh):**
+
+```bash
+cp -n .env.example .env
+set -a
+. ./.env
+set +a
+python -m ingest.historical_datasets --all
+```
+
+**Windows (PowerShell):**
+
+```powershell
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*([^#][^=]+)=(.*)$') {
+        [System.Environment]::SetEnvironmentVariable($matches[1].Trim(), $matches[2].Trim(), 'Process')
+    }
+}
+.\.venv\Scripts\python.exe -m ingest.historical_datasets --all
+```
+
+When complete, the CLI prints `Uploaded 63 objects to raw; existing objects skipped unless --force`
+(on a fresh bucket) and populates both `raw/beijing_pm25/` and `raw/elec2/`.
+
+MinIO Console: http://localhost:9001 (`127.0.0.1:9001`). S3 API:
+http://localhost:9000 (`127.0.0.1:9000`; containers use `http://minio:9000`).
+Local development credentials are documented in `.env.example`; use `.env` to
+override them. Keep AWS credentials aligned with MinIO credentials. Host ports
+for MinIO (`127.0.0.1:9000`, `127.0.0.1:9001`), Prometheus (`127.0.0.1:9090`)
+and Grafana (`127.0.0.1:3000`) are bound to localhost.
+
+Compose pins the publicly pullable `chainguard/minio` image by SHA-256 digest
+(`chainguard/minio@sha256:e9cf6b99c226e9539ed0f14b6f00e37b07da153c7ba1f4f8709c807574b471ec`,
+packaging MinIO `RELEASE.2026-11-16T00-11-40Z`) and pins `minio-init` to
+`public.ecr.aws/aws-cli/aws-cli:2.41.2`. The original `minio/minio` Docker Hub
+image could not be pulled on a clean setup. MinIO runs as UID:GID `100:101` to
+retain access to data created by the previous image. Ports 9000/9001, the
+`miniodata` volume, and the `mc ready local` healthcheck remain unchanged.
+Bucket `mlflow` is preserved; the initializer adds `raw`, `staging`, `features`
+and `models`. There is no custom image build or dataset container.
 
 ## Buckets and partitions
 
@@ -103,20 +162,32 @@ Normalization is independent of PR #6; it does not import or modify that branch.
 The existing one-week sample remains only for unit tests and explicit previews.
 
 `station_id` is retained in the Parquet files with int32 dictionary encoding
-compatible with Hive partition discovery. For example, read year-filtered files:
+compatible with Hive partition discovery. To load the **entire Beijing
+Multi-Site dataset** (all 60 partitions, 420,768 rows across 2013–2017) for
+multi-year training and a full 12-month baseline evaluation:
 
 ```python
 from pathlib import Path
 import pandas as pd
+from ingest.historical_datasets import BEIJING_COLUMNS
 
-paths = sorted(Path("data/raw/beijing_pm25").glob("year=2015/station_id=*/data.parquet"))
-beijing = pd.read_parquet(paths)
+paths = sorted(Path("data/raw/beijing_pm25").glob("year=*/station_id=*/data.parquet"))
+beijing = pd.read_parquet(paths, columns=BEIJING_COLUMNS)
 beijing["station_id"] = beijing["station_id"].astype("string")
+beijing = beijing.sort_values(["station_id", "event_time"]).reset_index(drop=True)
 ```
+
+Because `year=YYYY` directories are partitioned by **UTC** timestamps while
+Beijing calendar months are evaluated in `Asia/Shanghai` (`UTC+8`) and use up to
+24-hour lags, loading all `year=*` partitions preserves the contiguous 1-hour
+grid per station across year boundaries (`2013-03-01 00:00` through
+`2017-02-28 23:00` local time). You can also filter a single UTC year when
+needed (`glob("year=2015/station_id=*/data.parquet")`).
 
 Use a Parquet glob or manifest-listed paths rather than passing the dataset
 root containing `manifest.json` to a Parquet-only reader. Hive readers may add
-a virtual `year` column; select the seven contract columns when passing to AI.
+a virtual `year` column; passing `columns=BEIJING_COLUMNS` selects the exact
+seven contract columns when passing to AI.
 
 Elec2 comes from `river.datasets.Elec2`, preserving 45,312 observations:
 `sample_idx` and `day` are int64; `target` is bool; `date`, `period`, `nswprice`,
