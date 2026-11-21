@@ -94,7 +94,6 @@ services:
       test: [ "CMD", "mc", "--config-dir", "/tmp/mc", "ready", "local" ]
       interval: 5s
       retries: 10
-
   minio-init:
     image: public.ecr.aws/aws-cli/aws-cli:2.41.2
     depends_on:
@@ -189,7 +188,7 @@ services:
       MODEL_ALIAS: ${MODEL_ALIAS:-champion}
     ports:
       - "8000:8000"
-
+      
 volumes:
   pgdata:
   pgadmin_data:
