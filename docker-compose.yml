@@ -95,6 +95,7 @@ services:
       interval: 5s
       retries: 10
       
+      
   minio-init:
     image: public.ecr.aws/aws-cli/aws-cli:2.41.2
     depends_on:
@@ -178,18 +179,26 @@ services:
     restart: unless-stopped
   api:
     build:
-        context: .
-        dockerfile: serving/Dockerfile
+      context: .
+      dockerfile: serving/Dockerfile
     depends_on:
       mlflow:
         condition: service_healthy
     environment:
       MLFLOW_TRACKING_URI: http://mlflow:5000
-      MODEL_NAME: ${MODEL_NAME:-BreastCancerRandomForest}
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      AWS_DEFAULT_REGION: us-east-1
+      MODEL_NAME: ${MODEL_NAME:-pm25-forecasting}
+      MODEL_ALIAS: ${MODEL_ALIAS:-champion}
     ports:
       - "8000:8000"
-
+      
 volumes:
+  pgdata: 
+  pgadmin_data:
+  miniodata:
   pgdata: 
   pgadmin_data:
   miniodata:

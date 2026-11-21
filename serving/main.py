@@ -14,16 +14,10 @@ ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(ENV_PATH)
 
 # Configuration
-MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI")
-MODEL_NAME = os.getenv("MODEL_NAME")
-MODEL_ALIAS = os.getenv("MODEL_ALIAS")
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
+MODEL_NAME = os.getenv("MODEL_NAME", "pm25-forecasting")
+MODEL_ALIAS = os.getenv("MODEL_ALIAS", "champion")
 MODEL_URI = os.getenv("MODEL_URI")
-
-if not MLFLOW_TRACKING_URI:
-    raise RuntimeError("Missing MLFLOW_TRACKING_URI in .env")
-
-if not MODEL_NAME:
-    raise RuntimeError("Missing MODEL_NAME in .env")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -36,26 +30,18 @@ model = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global model
-
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-
-    if MODEL_URI:
-        MODEL_URI = MODEL_URI
-    else:
-        MODEL_URI = f"models:/{MODEL_NAME}@{MODEL_ALIAS}"
-
+    # Ưu tiên MODEL_URI nếu có, ngược lại fallback về tên model + alias (mặc định champion)
+    resolved_model_uri = MODEL_URI or f"models:/{MODEL_NAME}@{MODEL_ALIAS or 'champion'}"
     logger.info("MLflow URI: %s", MLFLOW_TRACKING_URI)
-    logger.info("Model URI: %s", MODEL_URI)
-
+    logger.info("Model URI: %s", resolved_model_uri)
     try:
-        model = mlflow.pyfunc.load_model(MODEL_URI)
+        model = mlflow.pyfunc.load_model(resolved_model_uri)
         logger.info("Model loaded successfully")
     except Exception:
         logger.exception("Failed to load model")
         raise
-
     yield
-
     model = None
 
 
@@ -72,60 +58,14 @@ app = FastAPI(
 
 
 class PredictionRequest(BaseModel):
-    features: list[list[float]] = Field(
-        ...,
-        description="Danh sách các mẫu dữ liệu, mỗi mẫu gồm đúng 30 features số thực (chuẩn Breast Cancer).",
+    features: list[dict[str, float]] | list[list[float]] = Field(
+        ..., description="Dữ liệu quan trắc đầu vào để dự báo nồng độ PM2.5."
     )
-
-    model_config = {
-        "json_schema_extra": {
-            "examples": [
-                {
-                    "features": [
-                        [
-                            17.99,
-                            10.38,
-                            122.8,
-                            1001.0,
-                            0.1184,
-                            0.2776,
-                            0.3001,
-                            0.1471,
-                            0.2419,
-                            0.07871,
-                            1.095,
-                            0.9053,
-                            8.589,
-                            153.4,
-                            0.006399,
-                            0.04904,
-                            0.05373,
-                            0.01587,
-                            0.03003,
-                            0.006193,
-                            25.38,
-                            17.33,
-                            184.6,
-                            2019.0,
-                            0.1622,
-                            0.6656,
-                            0.7119,
-                            0.2654,
-                            0.4601,
-                            0.1189,
-                        ]
-                    ]
-                }
-            ]
-        }
-    }
 
 
 class PredictionResponse(BaseModel):
-    model_name: str = Field(..., description="Tên model phục vụ dự đoán")
-    predictions: list[int] = Field(
-        ..., description="Danh sách nhãn dự đoán (0: Malignant / Ác tính, 1: Benign / Lành tính)"
-    )
+    model_name: str
+    predictions: list[float] = Field(..., description="Nồng độ PM2.5 dự báo (µg/m³)")
 
 
 # Endpoints
@@ -146,39 +86,29 @@ def health_check():
     }
 
 
-@app.post(
-    "/predict",
-    response_model=PredictionResponse,
-    tags=["Prediction"],
-)
+@app.post("/predict", response_model=PredictionResponse, tags=["Prediction"])
 def predict(request: PredictionRequest):
     if model is None:
-        raise HTTPException(
-            status_code=503,
-            detail="Model is not loaded",
-        )
-
+        raise HTTPException(status_code=503, detail="Model is not loaded")
     try:
-        if any(len(row) != 30 for row in request.features):
-            raise HTTPException(
-                status_code=422,
-                detail="Each sample must contain exactly 30 features",
-            )
-
         input_data = pd.DataFrame(request.features)
+        preds = model.predict(input_data)
 
-        predictions = model.predict(input_data)
-
+        # Ép sang float (PM2.5 không âm)
         return PredictionResponse(
             model_name=MODEL_NAME,
-            predictions=[int(value) for value in predictions],
+            model_alias=MODEL_ALIAS or "champion",
+            predictions=[max(0.0, float(v)) for v in preds],
         )
-
-    except HTTPException:
-        raise
     except Exception as exc:
         logger.exception("Prediction failed")
-        raise HTTPException(
-            status_code=500,
-            detail=str(exc),
-        )
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# /reload GIÚP không cần restart container
+@app.post("/reload", tags=["Management"], summary="Reload model champion mới nhất")
+def reload_model():
+    global model
+    resolved_uri = MODEL_URI or f"models:/{MODEL_NAME}@{MODEL_ALIAS or 'champion'}"
+    model = mlflow.pyfunc.load_model(resolved_uri)
+    return {"status": "reloaded", "model_uri": resolved_uri}
