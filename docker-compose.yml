@@ -193,5 +193,5 @@ services:
 volumes:
   pgdata:
   pgadmin_data:
-  miniod_data:
+  miniodata:
   redpanda_data:

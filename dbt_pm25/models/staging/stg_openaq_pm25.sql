@@ -14,4 +14,4 @@ FROM read_csv_auto(
 )
 
 WHERE TRY_CAST(event_time AS TIMESTAMPTZ) IS NOT NULL
-  AND TRY_CAST(pm25_ug_m3 AS DOUBLE) IS NOT NULL
+  AND NULLIF(TRIM(station_id), '') IS NOT NULL

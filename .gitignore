@@ -223,3 +223,10 @@ __marimo__/
 data/raw/
 *.parquet
 uv.lock
+
+# DuckDB and local dbt artifacts
+*.duckdb
+*.duckdb.wal
+dbt_pm25/.user.yml
+dbt_pm25/logs/
+dbt_pm25/dbt_packages/

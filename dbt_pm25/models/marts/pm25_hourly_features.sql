@@ -58,10 +58,12 @@ lag_features AS (
 
 ),
 
-local_features AS (
+time_features AS (
 
     SELECT
         *,
+        event_time AT TIME ZONE 'UTC'
+            AS utc_event_time,
         event_time AT TIME ZONE 'Asia/Ho_Chi_Minh'
             AS local_event_time
 
@@ -89,19 +91,19 @@ SELECT
     wind_direction_deg,
     precipitation_mm,
 
-    CAST(EXTRACT(HOUR FROM local_event_time) AS TINYINT)
+    CAST(EXTRACT(HOUR FROM utc_event_time) AS INTEGER)
         AS hour,
 
-    CAST(EXTRACT(ISODOW FROM local_event_time) AS TINYINT)
+    CAST(EXTRACT(ISODOW FROM utc_event_time) - 1 AS INTEGER)
         AS weekday,
 
     EXTRACT(ISODOW FROM local_event_time) IN (6, 7)
         AS is_weekend,
 
     EXISTS (
-    SELECT 1
-    FROM {{ ref('vn_holidays') }} AS h
-    WHERE h.holiday_date = CAST(f.local_event_time AS DATE)
-) AS is_holiday
+        SELECT 1
+        FROM {{ ref('vn_holidays') }} AS h
+        WHERE h.holiday_date = CAST(f.local_event_time AS DATE)
+    ) AS is_holiday
 
-FROM local_features AS f
+FROM time_features AS f
