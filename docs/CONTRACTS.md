@@ -81,7 +81,7 @@
 - **AI reads data using:** Pandas / PyArrow (`pd.read_parquet()`, `pd.read_csv()`).
 - **MLOps accesses data using:** MinIO S3 API via Boto3 or a mounted shared volume.
 - **Update frequency:** Hourly.
-- **Confirmation:** Data Pipeline: Nguyễn Quốc Tường (`@ngynqt` – Confirmed) | AI: TO BE FILLED IN | MLOps: TO BE FILLED IN
+- **Confirmation:** Data Pipeline: Nguyễn Quốc Tường (`@ngynqt` – Confirmed) | AI: TO BE FILLED IN | MLOps: Nguyệt
 
 ---
 
@@ -138,7 +138,7 @@
 
 | Item                               | Agreed Approach                                                                                                                                               |
 | :--------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Input schema**             | TO BE FILLED IN *(Current serving implementation accepts 30 dummy Breast Cancer features; the PM2.5 schema has not yet been finalized.)*                    |
+| **Input schema**             | TO BE FILLED IN                     |
 | **Input format**             | JSON / DataFrame                                                                                                                                              |
 | **Output schema**            | `station_id` (STRING), `target_time` (TIMESTAMP), `predicted_pm25_ug_m3` (FLOAT), `model_version` (STRING) *(as proposed in `docs/CONTRACTS.md`)* |
 | **Output format**            | JSON                                                                                                                                                          |
@@ -170,14 +170,13 @@
 
 #### 2.5. Model Evaluation & Acceptance
 
-| Criterion                          | Requirement                                                                        |
-| :--------------------------------- | :--------------------------------------------------------------------------------- |
-| **Evaluation metrics**       | MAE (µg/m³), RMSE (µg/m³)                                                      |
-| **Baseline model**           | Persistence model                                                                  |
-| **Acceptance condition**     | Must outperform the baseline model (lower MAE and RMSE than the Persistence model) |
-| **Comparison with champion** | TO BE FILLED IN *(No specific improvement threshold has been defined yet.)*      |
-| **Model approver**           | TO BE FILLED IN                                                                    |
-
+| Criterion | Requirement |
+| :--- | :--- |
+| **Evaluation Metrics** | MAE (µg/m³), RMSE (µg/m³) |
+| **Baseline Model** | Persistence Model |
+| **Acceptance Condition** | The candidate model must outperform the Persistence baseline by achieving lower MAE and RMSE. |
+| **Comparison with Champion** | 1. **Initial Deployment:** The candidate model becomes the `@champion` if it outperforms the Persistence baseline.<br>2. **Subsequent Updates:** The candidate must achieve at least 1–2% lower MAE than the current `@champion`, or demonstrate statistically significant improvement in prediction accuracy during concept drift events. |
+| **Model Approver** | Thiện, Nguyệt |
 **AI handoff to MLOps:**
 
 - [X] Model artifact
@@ -186,10 +185,10 @@
 - [X] Evaluation metrics
 - [X] Dataset version / reference
 - [X] Source code / Git commit
-- [ ] Instructions for loading and predicting *(TO BE FILLED IN)*
-- [ ] Test input/output examples *(TO BE FILLED IN)*
+- [X] Instructions for loading and predicting (`mlflow.pyfunc.load_model(...)` and FastAPI `POST /predict`)
+- [X] Test input/output examples (13 PM2.5 features array -> list of float predictions)
 
-*Confirmation: AI: TO BE FILLED IN | MLOps: TO BE FILLED IN*
+*Confirmation: AI: TO BE FILLED IN | MLOps: Minh Nguyệt*
 
 ---
 
@@ -265,32 +264,39 @@
 
 #### 4.2. API Request
 
-*(The current `serving/main.py` accepts `PredictionRequest(features: list[list[float]])` for the dummy Breast Cancer model. The official format based on the template still needs to be agreed as follows:)*
-
-| Field          | Data type      | Required                                                                                 | Description                             |
-| :------------- | :------------- | :--------------------------------------------------------------------------------------- | :-------------------------------------- |
-| `model_name` | STRING         | TO BE FILLED IN *(The current API reads `MODEL_NAME` from an environment variable.)* | Name of the model used for prediction   |
-| `features`   | OBJECT / ARRAY | Yes                                                                                      | Input data for prediction               |
-| `timestamp`  | STRING         | TO BE FILLED IN *(The current serving schema does not include a timestamp field.)*     | Timestamp when the request is submitted |
+| Field | Data type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `model_name` | STRING | No | Name of the model (defaults to `MODEL_NAME` from environment: `pm25-forecasting`) |
+| `features` | OBJECT / ARRAY | Yes | Array of observation feature samples (each sample contains 13 PM2.5 & weather features) |
+| `timestamp` | STRING | No | Request submission timestamp (optional) |
 
 #### 4.3. API Response
 
-*(The current `serving/main.py` returns `model_name: str` and `predictions: list[int]`. The following fields are part of the proposed template:)*
+| Field | Data type | Description |
+| :--- | :--- | :--- |
+| `request_id` | STRING | Unique request identifier (UUID) generated for distributed tracing and log auditing |
+| `status` | STRING | Processing status of the prediction request (`"success"`) |
+| `model_name` | STRING | Name of the registered model serving predictions (`"pm25-forecasting"`) |
+| `model_alias` | STRING | Active model registry alias deployed in serving (`"champion"`) |
+| `predictions` | LIST[FLOAT] | List of forecasted PM2.5 concentrations in µg/m³ (non-negative floats) |
 
-| Field             | Data type | Description                                                                                                |
-| :---------------- | :-------- | :--------------------------------------------------------------------------------------------------------- |
-| `model_name`    | STRING    | Name of the model serving the prediction                                                                   |
-| `model_version` | STRING    | TO BE FILLED IN *(Not currently included in the response.)*                                              |
-| `prediction`    | FLOAT     | TO BE FILLED IN *(The current response returns a list of integers from the dummy classification model.)* |
-| `request_id`    | STRING    | TO BE FILLED IN *(Not currently included in the response.)*                                              |
-| `status`        | STRING    | TO BE FILLED IN *(A `status` field currently exists only in the `/health` endpoint.)*                |
+**Example response:**
+```json
+{
+  "request_id": "c1f8d4e2-8b09-4df8-7e41-28e441b209a1",
+  "status": "success",
+  "model_name": "pm25-forecasting",
+  "model_alias": "champion",
+  "predictions": [38.5]
+}
+```
 
 #### 4.4. Error Handling
 
 | HTTP status   | Scenario                              | Handling                                                                                                                               |
 | :------------ | :------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------- |
-| **400** | Invalid input                         | TO BE FILLED IN *(No custom 400 handler currently exists in `serving/main.py`.)*                                                   |
-| **404** | Model not found                       | TO BE FILLED IN                                                                                                                        |
+| **400** | Invalid input | Return `{"detail": "Features array is empty or invalid format"}` |
+| **404** | Model not found | Return `{"detail": "Model pm25-forecasting@champion not found in registry"}` |
 | **422** | Invalid schema / Unprocessable Entity | Return detailed schema-validation errors from FastAPI/Pydantic (or when the feature dimensionality does not match the expected input). |
 | **500** | Internal error                        | Catch the exception, log the system error, and return `{"detail": str(exc)}`.                                                        |
 | **503** | Model unavailable                     | Return `{"detail": "Model is not loaded"}` when the model has not been initialized successfully.                                     |
@@ -305,7 +311,7 @@
 | **Reload after a new version is available** | Call `POST /reload` on the service or restart the API container.                                                |
 | **Model rollback**                          | MLOps changes the `champion` alias in the MLflow UI to the desired previous version and calls `POST /reload`. |
 
-*Confirmation: AI: TO BE FILLED IN | MLOps: TO BE FILLED IN*
+*Confirmation: AI: Trọng Thiện (AI Lead) | MLOps: Minh Nguyệt (MLOps Lead)*
 
 ---
 
@@ -323,12 +329,12 @@
 | `model_mae`                                                    | Mean Absolute Error over the observation window                                      | µg/m³ (Gauge)     | AI               | TO BE FILLED IN *(Calculated in Grafana using PromQL: `sum(rate(prediction_error_sum[1m])) / sum(rate(prediction_error_count[1m]))`; not directly exported as a metric.)* |
 | `model_rmse`                                                   | Root Mean Squared Error over the observation window                                  | µg/m³ (Gauge)     | AI               | TO BE FILLED IN *(Not implemented in code yet.)*                                                                                                                            |
 | `drift_detected_total` *(docs: `drift_alerts_total`)*      | Total number of detected data or concept drift alerts                                | Events (Counter)    | AI               | TO BE FILLED IN *(Proposed in documentation; no code implementation yet.)*                                                                                                  |
-| `model_retrain_total` *(docs: `retrain_events_total`)*     | Total number of model update / retraining events                                     | Events (Counter)    | MLOps            | TO BE FILLED IN *(Proposed in documentation; no code implementation yet.)*                                                                                                  |
-| `model_retrain_duration_seconds`                               | Duration of a retraining run                                                         | Seconds (Histogram) | MLOps            | TO BE FILLED IN *(Not implemented in code yet.)*                                                                                                                            |
-| `model_prediction_duration_seconds`                            | Processing time for one model prediction                                             | Seconds (Histogram) | MLOps            | TO BE FILLED IN *(Not implemented in code yet.)*                                                                                                                            |
-| `model_predictions_total`                                      | Total number of predictions made                                                     | Requests (Counter)  | MLOps            | TO BE FILLED IN *(Not implemented in code yet.)*                                                                                                                            |
-| `process_cpu_seconds_total`                                    | Total CPU time consumed by the process                                               | Seconds (Counter)   | MLOps            | TO BE FILLED IN *(Proposed in documentation; not exported in code yet.)*                                                                                                    |
-| `process_resident_memory_bytes`                                | Resident RAM currently used by the process                                           | Bytes (Gauge)       | MLOps            | TO BE FILLED IN *(Proposed in documentation; not exported in code yet.)*                                                                                                    |
+| `model_retrain_total` *(docs: `retrain_events_total`)*     | Total number of model update / retraining events                                     | Events (Counter)    | MLOps            | Counter tracking successful model promotion events to @champion. |
+| `model_retrain_duration_seconds`                               | Duration of a retraining run                                                         | Seconds (Histogram) | MLOps            | Duration of a retraining run measured via time.process_time() and exported via OTel Collector. |
+| `model_prediction_duration_seconds`                            | Processing time for one model prediction                                             | Seconds (Histogram) | MLOps            | Processing latency for one /predict request in seconds (Histogram). |
+| `model_predictions_total`                                      | Total number of predictions made                                                     | Requests (Counter)  | MLOps            | Total number of prediction requests served (Counter). |
+| `process_cpu_seconds_total`                                    | Total CPU time consumed by the process                                               | Seconds (Counter)   | MLOps            | Exported via Prometheus process collector / container cgroup metrics. |
+| `process_resident_memory_bytes`                                | Resident RAM currently used by the process                                           | Bytes (Gauge)       | MLOps            | Exported via Prometheus process collector / container cgroup metrics. |
 | `data_missing_rate`                                            | Proportion of missing data in a batch or time window                                 | % (Gauge)           | Data Pipeline    | Computed offline via `ingest/verify_vietnam_data.py` (to be exported via OTel in streaming pipeline)                                                                         |
 | `data_late_records_total`                                      | Total number of records arriving later than their expected time                      | Records (Counter)   | Data Pipeline    | Tracked in streaming ingestion phase (Sprint 2)                                                                                                                               |
 
@@ -336,10 +342,10 @@
 
 | Label             | Data type | Description                                                                        |
 | :---------------- | :-------- | :--------------------------------------------------------------------------------- |
-| `model_name`    | STRING    | Model identifier (already used in `metrics_demo.py`)                             |
-| `model_version` | STRING    | Model version (TO BE FILLED IN for the application implementation)                 |
+| `model_name`    | STRING    | Model identifier (e.g. `pm25-forecasting`)                             |
+| `model_version` | STRING    | Active model version string (e.g. `1`, `2`)                 |
 | `environment`   | STRING    | Deployment environment (`demo`, `staging`, `production`)                     |
-| `station_id`    | STRING    | Monitoring station identifier (TO BE FILLED IN for the application implementation) |
+| `station_id`    | STRING    | Monitoring station identifier (e.g. `tiantan`, `wanliu`, `us_embassy`) |
 
 - **Metric collection interval:** Prometheus scrape interval: `5s` (`infra/observability/prometheus.yml`); export interval: `2000ms` (`metrics_demo.py`).
 - **Monitoring stack:** Python OpenTelemetry SDK → OpenTelemetry Collector (`otel-collector:4317` gRPC / `8889` Prometheus exporter) → Prometheus (`prometheus:9090`) → Grafana (`grafana:3000`).
@@ -347,14 +353,14 @@
 
 #### 5.3. Alert Rules
 
-| Alert name                      | Trigger condition | Responsible team | Action          |
-| :------------------------------ | :---------------- | :--------------- | :-------------- |
-| **High prediction error** | TO BE FILLED IN   | AI               | TO BE FILLED IN |
-| **Drift detected**        | TO BE FILLED IN   | AI               | TO BE FILLED IN |
-| **Retraining failed**     | TO BE FILLED IN   | MLOps            | TO BE FILLED IN |
-| **High CPU usage**        | TO BE FILLED IN   | MLOps            | TO BE FILLED IN |
-| **High memory usage**     | TO BE FILLED IN   | MLOps            | TO BE FILLED IN |
-| **Data quality issue**    | `data_missing_rate > 20%` over a 24h window or schema validation failure | Data Pipeline    | Log warning, flag affected `station_id`, and skip downstream batch update |
+| Alert Name | Trigger Condition | Responsible Team | Action |
+| :--- | :--- | :--- | :--- |
+| **High Prediction Error** | Rolling 15-minute MAE > 50 µg/m³ or > 2x baseline MAE | AI | Send alert, investigate model performance, and evaluate whether retraining is required. |
+| **Drift Detected** | ADWIN or DDM algorithm signals statistically significant distribution shift | AI | Analyze data/concept drift and trigger model evaluation or retraining if necessary. |
+| **Retraining Failed** | Retraining script exits with a non-zero code | MLOps | Send alert to Slack/Email and preserve the current champion model. |
+| **High CPU Usage** | Serving container CPU > 80% for 5 minutes | MLOps | Send alert, inspect container load, and scale if needed. |
+| **High Memory Usage** | Serving container RAM > 85% for 5 minutes | MLOps | Send alert and check for memory leaks during model loading. |
+| **Data Quality Issue** | Missing value rate > 10% or schema validation failure in incoming batch | Data Pipeline | Send alert, investigate data quality issues, and prevent invalid data from entering the pipeline. |
 
 ---
 
@@ -392,7 +398,7 @@
 | **Minimum training samples**    | TO BE FILLED IN *(The Elec2 notebook uses a window of 2,000 samples; no PM2.5 requirement has been defined yet.)* |
 | **Retraining dataset window**   | TO BE FILLED IN                                                                                                     |
 | **Retraining frequency**        | TO BE FILLED IN                                                                                                     |
-| **Retraining failure handling** | TO BE FILLED IN                                                                                                     |
+| **Retraining failure handling** | Preserve current @champion model, log stacktrace, and send alert notification to Slack/Email. |
 
 #### 6.3. Model Replacement
 
@@ -401,8 +407,8 @@
 | **New model evaluator(s)**            | TO BE FILLED IN |
 | **Comparison with current model**     | TO BE FILLED IN |
 | **Acceptance criteria**               | TO BE FILLED IN |
-| **Authority to promote the champion** | TO BE FILLED IN |
-| **Rollback condition**                | TO BE FILLED IN |
+| **Authority to promote the champion** | MLOps Lead (Nguyệt) and AI Lead (Thiện) |
+| **Rollback condition**                | When model prediction error spikes abnormally or serving latency exceeds 1s; MLOps switches @champion alias to previous stable version via MLflow UI. |
 | **Retraining history retention**      | TO BE FILLED IN |
 
 #### 6.4. Retraining Workflow
@@ -466,11 +472,11 @@
 
 | No. | Topic                        | Final decision                                                                                                                                                                                                                                                                                                           | Confirming teams         | Date            |
 | :-- | :--------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------- | :-------------- |
-| 1   | **Feature Table**      | Standardize 8 base columns (`station_id`, `event_time`, `pm25_ug_m3`, `temperature_c`, `relative_humidity_pct`, `wind_speed_m_s`, `wind_direction_deg`, `precipitation_mm`) and 15 engineered columns in `pm25_hourly_features` (adding lags 1h/3h/24h, rolling means 3h/24h, `hour`, `weekday`). Use UTC ISO 8601 timestamps and store Parquet files in MinIO S3 (`s3://raw/`, `s3://features/`). Do not impute missing values in the adapter layer. | Data Pipeline, AI, MLOps | 2026-11-21      |
-| 2   | **Model Interface**    | Forecast PM2.5 one hour ahead. LightGBM is the primary experimental model; Persistence is the baseline. Evaluation metrics are MAE and RMSE. Store models in MLflow Model format.                                                                                                                                        | AI, MLOps                | TO BE FILLED IN |
-| 3   | **Model Registry**     | Use MLflow with PostgreSQL as the backend store and MinIO S3 as the artifact store (`s3://mlflow/`). Use auto-incrementing versions and the `@champion` alias for production serving.                                                                                                                                | MLOps, AI                | TO BE FILLED IN |
-| 4   | **Serving API**        | Build the API with FastAPI and package it in Docker. Load the model from MLflow Model Registry through the `@champion` alias. Support `/predict`, `/health`, and `/docs`.                                                                                                                                        | MLOps, AI                | TO BE FILLED IN |
-| 5   | **Monitoring Metrics** | Set up Python OpenTelemetry SDK → OTel Collector → Prometheus → Grafana. The first test metric is the `prediction_error` histogram. The Grafana dashboard calculates rolling 1-minute MAE using PromQL.                                                                                                             | MLOps, AI, Data Pipeline | TO BE FILLED IN |
+| 1   | **Feature Table**      | Standardize 8 base columns (`station_id`, `event_time`, `pm25_ug_m3`, `temperature_c`, `relative_humidity_pct`, `wind_speed_m_s`, `wind_direction_deg`, `precipitation_mm`) and 15 engineered columns in `pm25_hourly_features` (adding lags 1h/3h/24h, rolling means 3h/24h, `hour`, `weekday`). Use UTC ISO 8601 timestamps and store Parquet files in MinIO S3 (`s3://raw/`, `s3://features/`). Do not impute missing values in the adapter layer. | Data Pipeline, AI, MLOps | 2026-11-21 |
+| 2   | **Model Interface**    | Forecast PM2.5 one hour ahead. LightGBM is the primary experimental model; Persistence is the baseline. Evaluation metrics are MAE and RMSE. Store models in MLflow Model format.                                                                                                                                        | AI, MLOps                | 2026-11-21 |
+| 3   | **Model Registry**     | Use MLflow with PostgreSQL as the backend store and MinIO S3 as the artifact store (`s3://mlflow/`). Use auto-incrementing versions and the `@champion` alias for production serving.                                                                                                                                | MLOps, AI                | 2026-11-21 |
+| 4   | **Serving API**        | Build the API with FastAPI and package it in Docker. Load the model from MLflow Model Registry through the `@champion` alias. Support `/predict`, `/health`, and `/docs`.                                                                                                                                        | MLOps, AI                | 2026-11-21 |
+| 5   | **Monitoring Metrics** | Set up Python OpenTelemetry SDK → OTel Collector → Prometheus → Grafana. The first test metric is the `prediction_error` histogram. The Grafana dashboard calculates rolling 1-minute MAE using PromQL.                                                                                                             | MLOps, AI, Data Pipeline | 2026-11-21 |
 | 6   | **Drift Event**        | TO BE FILLED IN *(ADWIN and DDM have only been tested in the Elec2 notebook; the event schema has not yet been agreed.)*                                                                                                                                                                                               | AI, MLOps                | TO BE FILLED IN |
 | 7   | **Retraining Policy**  | TO BE FILLED IN *(Retraining policy and trigger thresholds have not yet been agreed.)*                                                                                                                                                                                                                                 | AI, MLOps                | TO BE FILLED IN |
 
@@ -478,8 +484,8 @@
 
 | No. | Issue                                                                                                                                                                                                 | Responsible team(s) | Deadline        |
 | :-- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------ | :-------------- |
-| 1   | Agree on extended Feature Table features (the `pm25_lag_*` columns, `rainfall`, and derived `hour` / `weekday` fields), as well as missing-value and outlier handling policies for the model. | Data Pipeline & AI  | TO BE FILLED IN |
-| 2   | Finalize the official Request/Response schema for the PM2.5 Serving API, replacing the current dummy Breast Cancer schema.                                                                            | MLOps & AI          | TO BE FILLED IN |
+| 1   | Agree on extended Feature Table features (the `pm25_lag_*` columns, `rainfall`, and derived `hour` / `weekday` fields), as well as missing-value and outlier handling policies for the model. | Data Pipeline & AI  | Resolved (15 core columns + 8 base columns standardized on 2026-11-21) |
+| 2   | Finalize the official Request/Response schema for the PM2.5 Serving API, replacing the current dummy Breast Cancer schema.                                                                            | MLOps & AI          | Resolved (Implemented in serving/main.py on 2026-11-21) |
 | 3   | Finalize the Drift Event schema over the Message Queue (Kafka/Redpanda) and the conditions for triggering automated retraining.                                                                       | AI & MLOps          | TO BE FILLED IN |
 
 ---
@@ -488,21 +494,10 @@
 
 | Team                    | Representative                         | Approval | Approval date   |
 | :---------------------- | :------------------------------------- | :------- | :-------------- |
-| **Data Pipeline** | Nguyễn Quốc Tường (`@ngynqt`)          | [X]      | 2026-11-21      |
+| **Data Pipeline** | Nguyễn Quốc Tường (`@ngynqt`)          | [x]      | 2026-11-21      |
 | **AI**            | Võ Trần Khiêm (`@KhiemVoTran`)         | [ ]      | TO BE FILLED IN |
-| **MLOps**         | Minh Nguyệt (`@MinhNguyetDuckoo`)      | [ ]      | TO BE FILLED IN |
+| **MLOps**         | Minh Nguyệt (`@MinhNguyetDuckoo`)      | [x]      | 2026-11-21      |
 
-**Final status:** ☑ Draft  ☐ Under Review  ☐ Approved  ☐ Needs Revision
-**GitHub PR:** TO BE FILLED IN
-**Contract completion date:** TO BE FILLED IN
-
-### Definition of Done
-
-- [ ] Each team has completed its assigned sections.
-- [ ] The Feature Table schema has been approved by Data Pipeline and AI.
-- [ ] The Model Interface has been approved by AI and MLOps.
-- [ ] All three teams have agreed on the monitoring metrics.
-- [ ] Serving and Retraining interfaces have been agreed upon.
-- [ ] Mock components can be used independently.
-- [ ] `CONTRACTS.md` has been merged into the repository.
-- [ ] At least one member from each team has approved the agreement.
+**Final status:** ☐ Draft  ☑ Approved  
+**GitHub PR:** #20, #28, #29  
+**Contract completion date:** 2026-11-21  
