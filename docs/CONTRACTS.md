@@ -50,7 +50,7 @@
 | 12 | `wind_direction_deg` | FLOAT | Degree | Yes | Wind direction |
 | 13 | `hour` | INTEGER | 0–23 | No | Hour of day |
 | 14 | `weekday` | INTEGER | 0–6 | No | Day of the week |
-
+| 15 | `Holiday` | BOOLEAN | TRUE/FALSE | No | Indicates whether the observation date is a public holiday |
 **Notes:**
 - Lag and rolling mean features must be calculated separately for each monitoring station (`station_id`).
 - Lag features represent historical observations and must not use future data.
