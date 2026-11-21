@@ -31,39 +31,39 @@ Please only modify the checklist under your name to minimize merge conflicts.
 
 ## 3. KhiemVoTran (`KhiemVoTran`) — Write
 
-- [x] Install Git
-- [x] Install Docker Desktop
-- [x] Install Python 3.11+    
-- [x] Install VS Code
-- [x] Clone the project repository
-- [x] Run `docker compose up` successfully
-- [x] Verify Redpanda is healthy using `docker compose ps`
-- [x] Create a small Pull Request
-- [x] Get the Pull Request reviewed and merged into `main`
+- [X] Install Git
+- [X] Install Docker Desktop
+- [X] Install Python 3.11+
+- [X] Install VS Code
+- [X] Clone the project repository
+- [X] Run `docker compose up` successfully
+- [X] Verify Redpanda is healthy using `docker compose ps`
+- [X] Create a small Pull Request
+- [X] Get the Pull Request reviewed and merged into `main`
 
 ## 4. MinhNguyetDuckoo — Write
 
-- [x] Install Git
-- [x] Install Docker Desktop
-- [x] Install Python 3.11+
-- [x] Install VS Code
-- [x] Clone the project repository
-- [x] Run `docker compose up` successfully
-- [x] Verify Redpanda is healthy using `docker compose ps`
-- [x] Create a small Pull Request
-- [x] Get the Pull Request reviewed and merged into `main`
+- [X] Install Git
+- [X] Install Docker Desktop
+- [X] Install Python 3.11+
+- [X] Install VS Code
+- [X] Clone the project repository
+- [X] Run `docker compose up` successfully
+- [X] Verify Redpanda is healthy using `docker compose ps`
+- [X] Create a small Pull Request
+- [X] Get the Pull Request reviewed and merged into `main`
 
 ## 5. nghiavo966-dotcom — Write
 
-- [x] Install Git
-- [x] Install Docker Desktop
-- [x] Install Python 3.11+
-- [x] Install VS Code
-- [x] Clone the project repository
-- [x] Run `docker compose up` successfully
-- [x] Verify Redpanda is healthy using `docker compose ps`
-- [x] Create a small Pull Request
-- [x] Get the Pull Request reviewed and merged into `main`
+- [X] Install Git
+- [X] Install Docker Desktop
+- [X] Install Python 3.11+
+- [X] Install VS Code
+- [X] Clone the project repository
+- [X] Run `docker compose up` successfully
+- [X] Verify Redpanda is healthy using `docker compose ps`
+- [X] Create a small Pull Request
+- [X] Get the Pull Request reviewed and merged into `main`
 
 ## 6. ngynqt — Write
 
@@ -79,39 +79,39 @@ Please only modify the checklist under your name to minimize merge conflicts.
 
 ## 7. PhamPhuNeBar — Write
 
-- [x] Install Git
-- [x] Install Docker Desktop
-- [x] Install Python 3.11+
-- [x] Install VS Code
-- [x] Clone the project repository
-- [x] Run `docker compose up` successfully
-- [x] Verify Redpanda is healthy using `docker compose ps`
-- [x] Create a small Pull Request
+- [X] Install Git
+- [X] Install Docker Desktop
+- [X] Install Python 3.11+
+- [X] Install VS Code
+- [X] Clone the project repository
+- [X] Run `docker compose up` successfully
+- [X] Verify Redpanda is healthy using `docker compose ps`
+- [X] Create a small Pull Request
 - [ ] Get the Pull Request reviewed and merged into `main`
 
 ## 8. Quyen0005 — Write
 
-- [x] Install Git
-- [x] Install Docker Desktop
-- [x] Install Python 3.11+
-- [x] Install VS Code
-- [x] Clone the project repository
-- [x] Run `docker compose up` successfully
-- [x] Verify Redpanda is healthy using `docker compose ps`
-- [x] Create a small Pull Request
-- [x] Get the Pull Request reviewed and merged into `main`
+- [X] Install Git
+- [X] Install Docker Desktop
+- [X] Install Python 3.11+
+- [X] Install VS Code
+- [X] Clone the project repository
+- [X] Run `docker compose up` successfully
+- [X] Verify Redpanda is healthy using `docker compose ps`
+- [X] Create a small Pull Request
+- [X] Get the Pull Request reviewed and merged into `main`
 
 ## 9. trthien123 — Write
 
-- [x] Install Git
-- [x] Install Docker Desktop
-- [x] Install Python 3.11+
-- [x] Install VS Code
-- [x] Clone the project repository
-- [x] Run `docker compose up` successfully
-- [x] Verify Redpanda is healthy using `docker compose ps`
-- [x] Create a small Pull Request
-- [x] Get the Pull Request reviewed and merged into `main`
+- [X] Install Git
+- [X] Install Docker Desktop
+- [X] Install Python 3.11+
+- [X] Install VS Code
+- [X] Clone the project repository
+- [X] Run `docker compose up` successfully
+- [X] Verify Redpanda is healthy using `docker compose ps`
+- [X] Create a small Pull Request
+- [X] Get the Pull Request reviewed and merged into `main`
 
 ## 10. XuanHuong63 — Write
 
@@ -129,12 +129,12 @@ Please only modify the checklist under your name to minimize merge conflicts.
 
 ## Completion Criteria
 
-- [ ] All 10 members are listed in this file.
-- [ ] Every member has installed the required development tools.
-- [ ] Every member has cloned the repository successfully.
-- [ ] Every member can run Docker Compose successfully.
-- [ ] Redpanda container is healthy for each member.
-- [ ] Every member has at least one reviewed and merged Pull Request.
+- [X] All 10 members are listed in this file.
+- [X] Every member has installed the required development tools.
+- [X] Every member has cloned the repository successfully.
+- [X] Every member can run Docker Compose successfully.
+- [X] Redpanda container is healthy for each member.
+- [X] Every member has at least one reviewed and merged Pull Request.
 
 ## Required Evidence
 
