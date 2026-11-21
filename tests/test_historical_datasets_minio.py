@@ -87,12 +87,16 @@ def test_compose_layout():
 
     import yaml
 
-    config = yaml.safe_load(Path("docker-compose.yml").read_text())
+    config = yaml.safe_load(Path("docker-compose.yml").read_text(encoding="utf-8"))
     services = config["services"]
     assert services["minio"]["volumes"] == ["miniodata:/data"]
     for bucket in BUCKETS:
         assert bucket in services["minio-init"]["command"][0].replace(";", " ").split()
-    assert services["minio"]["image"] == "chainguard/minio:latest"
+    assert services["minio"]["image"] == (
+        "chainguard/minio@sha256:e9cf6b99c226e9539ed0f14b6f00e37b07da153c7ba1f4f8709c807574b471ec"
+    )
+    assert services["minio"]["ports"] == ["127.0.0.1:9000:9000", "127.0.0.1:9001:9001"]
+    assert services["minio-init"]["image"] == "public.ecr.aws/aws-cli/aws-cli:2.41.2"
     assert services["minio"]["healthcheck"]["test"] == [
         "CMD",
         "mc",
