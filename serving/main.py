@@ -1,5 +1,6 @@
 import logging
 import os
+import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -64,7 +65,12 @@ class PredictionRequest(BaseModel):
 
 
 class PredictionResponse(BaseModel):
+    request_id: str = Field(
+        default_factory=lambda: str(uuid.uuid4()), description="Mã định danh lượt gọi API"
+    )
+    status: str = Field(default="success", description="Trạng thái xử lý")
     model_name: str
+    model_alias: str | None = None
     predictions: list[float] = Field(..., description="Nồng độ PM2.5 dự báo (µg/m³)")
 
 
