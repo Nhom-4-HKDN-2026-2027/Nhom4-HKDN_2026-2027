@@ -20,19 +20,20 @@
 
 | Item                       | Agreed Information                                                                                                                                                                                                                                                             |
 | :------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Datasets**         | 1. **Historical Benchmark:** Beijing Multi-Site Air Quality Dataset and Elec2 Dataset2. **Live / Vietnam Air Quality:** OpenAQ (PM2.5) + Open-Meteo ERA5 (Weather)                                                                                                 |
-| **Data sources**     | - Beijing Air Quality: Kaggle (`sid321axn/beijing-multisite-airquality-data-set`), UCI (`10.24432/C5RK5G`)- Elec2: River ML datasets (`river.datasets.Elec2`)- Vietnam PM2.5: OpenAQ API- Vietnam Weather: Open-Meteo API (Historical / Forecast Weather model `era5`) |
-| **Cities / regions** | - Beijing: 12 monitoring stations in Beijing- Vietnam: Hanoi and Ho Chi Minh City (HCMC)- Elec2: New South Wales, Australia                                                                                                                                                    |
-| **Data time range**  | - Beijing: 2013-03-01 – 2017-02-28 (hourly)- Vietnam: 2024-11-14 – 2026-11-14 (2 years, according to `vietnam_pipeline.toml`); one-week sample: 2025-11-15 – 2025-11-22                                                                                                   |
+| **Datasets**         | 1. **Historical Benchmark:** Beijing Multi-Site Air Quality Dataset and Elec2 Dataset<br>2. **Live / Vietnam Air Quality:** OpenAQ (PM2.5) + Open-Meteo ERA5 (Weather)                                                                                             |
+| **Data sources**     | - Beijing Air Quality: Kaggle (`sid321axn/beijing-multisite-airquality-data-set`), UCI (`10.24432/C5RK5G`)<br>- Elec2: River ML datasets (`river.datasets.Elec2`)<br>- Vietnam PM2.5: OpenAQ API<br>- Vietnam Weather: Open-Meteo API (Historical / Forecast Weather model `era5`) |
+| **Cities / regions** | - Beijing: 12 monitoring stations in Beijing<br>- Vietnam: Hanoi and Ho Chi Minh City (HCMC)<br>- Elec2: New South Wales, Australia                                                                                                                                        |
+| **Data time range**  | - Beijing: 2013-03-01 – 2017-02-28 (hourly)<br>- Vietnam: 2024-11-14 – 2026-11-14 (2 years, according to `vietnam_pipeline.toml`); one-week sample: 2025-11-15 – 2025-11-22                                                                                               |
 | **Data formats**     | Parquet (primary processing/storage format) / CSV (sample or exported data)                                                                                                                                                                                                    |
 | **Storage location** | MinIO S3 object storage (buckets: `raw`, `staging`, `features`) at `http://minio:9000` (inside Docker) or `http://localhost:9000` (host); local storage at `data/raw/` and `data/sample/`                                                                        |
 | **Update frequency** | Hourly                                                                                                                                                                                                                                                                         |
-| **Owner**            | TO BE FILLED IN                                                                                                                                                                                                                                                                |
+| **Owner**            | Data Pipeline Team (`@ngynqt`, `@HuynhThiCamGiang`, `@XuanHuong63`)                                                                                                                                                                                                            |
 
 #### 1.2. Feature Table Schema
 
 - **Table name:** `pm25_hourly_features`
-- **Description:** An hourly feature table containing historical PM2.5 concentrations, lag features, rolling mean features, meteorological variables, and time-based features for PM2.5 forecasting.
+- **Description:** An hourly feature table containing historical PM2.5 concentrations, lag features, rolling mean features, meteorological variables (including rainfall/precipitation), and time-based features for PM2.5 forecasting.
+- **Base Observation Schema (8 columns produced by `ingest/feature_contract.py` & stored in `s3://raw/` / `data/sample/`):** `station_id`, `event_time`, `pm25_ug_m3`, `temperature_c`, `relative_humidity_pct`, `wind_speed_m_s`, `wind_direction_deg`, `precipitation_mm`.
 
 | No. | Column name | Data type | Unit | Nullable? | Description |
 |:---:|---|---|:---:|---|---|
@@ -48,8 +49,9 @@
 | 10 | `relative_humidity_pct` | FLOAT | % | Yes | Relative humidity |
 | 11 | `wind_speed_m_s` | FLOAT | m/s | Yes | Wind speed |
 | 12 | `wind_direction_deg` | FLOAT | Degree | Yes | Wind direction |
-| 13 | `hour` | INTEGER | 0–23 | No | Hour of day |
-| 14 | `weekday` | INTEGER | 0–6 | No | Day of the week |
+| 13 | `precipitation_mm` | FLOAT | mm | Yes | Hourly precipitation / rainfall |
+| 14 | `hour` | INTEGER | 0–23 | No | Hour of day |
+| 15 | `weekday` | INTEGER | 0–6 | No | Day of the week |
 
 **Notes:**
 - Lag and rolling mean features must be calculated separately for each monitoring station (`station_id`).
@@ -58,7 +60,7 @@
 - `hour` is extracted from `event_time`.
 - `weekday` is extracted from `event_time`, where 0 represents Monday and 6 represents Sunday.
 - Missing historical values may result in NULL values in lag and rolling mean features.
-- This schema is a proposed feature contract and must be agreed upon by the Data Pipeline and AI teams before implementation.
+- For the Vietnam dbt feature mart (`dbt_pm25`), additional calendar/location columns (`city` STRING, `is_weekend` BOOLEAN, `is_holiday` BOOLEAN) may be included alongside the 15 core columns above.
 
 #### 1.3. Data Rules
 
@@ -68,9 +70,9 @@
 | **Timezone**                   | UTC (timezone-aware timestamps are mandatory; local timestamps from source systems must be normalized to UTC)                                                                                                  |
 | **Missing values**             | Preserve `NaN` for numeric fields. Do not impute or silently drop missing values in the schema adapter layer.                                                                                                |
 | **Duplicate records**          | Identify records using the composite key `(station_id, event_time)`. Duplicate records are not allowed; raise an error if detected.                                                                          |
-| **Outliers**                   | TO BE FILLED IN *(Current code checks physical validity, such as temperature and humidity ranges; non-finite values trigger an error.)*                                                                      |
+| **Outliers**                   | Reject non-finite values (`inf`, `-inf`) and physically invalid ranges (e.g., `pm25_ug_m3 < 0`, `relative_humidity_pct` outside `[0, 100]`, `wind_speed_m_s < 0`, `wind_direction_deg` outside `[0, 360]`, `precipitation_mm < 0`); preserve valid extreme pollution spikes for drift detection. |
 | **Late-arriving data**         | Retain late-arriving records; do not silently discard them. Associate them with the corresponding station and `target_time`. The model should calculate errors only when the actual label becomes available. |
-| **Data updates / corrections** | TO BE FILLED IN *(The current MinIO upload process skips duplicate files unless the `--force` flag is used.)*                                                                                              |
+| **Data updates / corrections** | Idempotent ingestion keyed by `(station_id, event_time)`. MinIO Parquet uploads skip existing objects by default and overwrite only when explicitly run with `--force` (updating `manifest.json`).             |
 | **Data validation**            | Validate schema, data types, primary keys, and hourly timestamp alignment through `ingest/feature_contract.py`; check data completeness and gaps using `verify_vietnam_data.py`.                           |
 
 #### 1.4. Handoff Between Teams
@@ -79,7 +81,7 @@
 - **AI reads data using:** Pandas / PyArrow (`pd.read_parquet()`, `pd.read_csv()`).
 - **MLOps accesses data using:** MinIO S3 API via Boto3 or a mounted shared volume.
 - **Update frequency:** Hourly.
-- **Confirmation:** Data Pipeline: TO BE FILLED IN | AI: TO BE FILLED IN | MLOps: TO BE FILLED IN
+- **Confirmation:** Data Pipeline: Nguyễn Quốc Tường (`@ngynqt` – Confirmed) | AI: TO BE FILLED IN | MLOps: TO BE FILLED IN
 
 ---
 
@@ -94,7 +96,7 @@
 | Item                         | Agreed Approach                                                                                                                                                                                                                                                                                                                                                                     |
 | :--------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Problem type**       | PM2.5 Forecasting                                                                                                                                                                                                                                                                                                                                                                   |
-| **Model algorithm**    | - Primary experiment: LightGBM Regressor (`LGBMRegressor`)- Baseline for comparison: Persistence model (uses the current PM2.5 value as the forecast for the future)- Current MLOps mock component: `RandomForestClassifier` trained on the Breast Cancer dataset                                                                                                               |
+| **Model algorithm**    | - Primary experiment: LightGBM Regressor (`LGBMRegressor`)<br>- Baseline for comparison: Persistence model (uses the current PM2.5 value as the forecast for the future)<br>- Current MLOps mock component: `RandomForestClassifier` trained on the Breast Cancer dataset                                                                                                       |
 | **Framework**          | LightGBM / Scikit-Learn                                                                                                                                                                                                                                                                                                                                                             |
 | **Language / version** | Python 3.11                                                                                                                                                                                                                                                                                                                                                                         |
 | **Input features**     | Current baseline notebook experiments use: `pm25_ug_m3`, `hour`, `dayofweek`, PM2.5 lags `pm25_lag1`, `pm25_lag2`, `pm25_lag3`, `pm25_lag6`, `pm25_lag12`, `pm25_lag24`, and weather lags (`temperature_c_lag1`, `relative_humidity_pct_lag1`, `wind_speed_m_s_lag1`, `wind_direction_deg_lag1`). Official feature contract for handoff: TO BE FILLED IN. |
@@ -146,7 +148,7 @@
 **Example input:**
 
 ```json
-{"pm25": 35.2, "pm25_lag_1h": 32.1}
+{"pm25_ug_m3": 35.2, "pm25_lag_1h": 32.1}
 ```
 
 **Example output:**
@@ -327,8 +329,8 @@
 | `model_predictions_total`                                      | Total number of predictions made                                                     | Requests (Counter)  | MLOps            | TO BE FILLED IN *(Not implemented in code yet.)*                                                                                                                            |
 | `process_cpu_seconds_total`                                    | Total CPU time consumed by the process                                               | Seconds (Counter)   | MLOps            | TO BE FILLED IN *(Proposed in documentation; not exported in code yet.)*                                                                                                    |
 | `process_resident_memory_bytes`                                | Resident RAM currently used by the process                                           | Bytes (Gauge)       | MLOps            | TO BE FILLED IN *(Proposed in documentation; not exported in code yet.)*                                                                                                    |
-| `data_missing_rate`                                            | Proportion of missing data in a batch or time window                                 | % (Gauge)           | Data Pipeline    | TO BE FILLED IN *(Not implemented in code yet.)*                                                                                                                            |
-| `data_late_records_total`                                      | Total number of records arriving later than their expected time                      | Records (Counter)   | Data Pipeline    | TO BE FILLED IN *(Not implemented in code yet.)*                                                                                                                            |
+| `data_missing_rate`                                            | Proportion of missing data in a batch or time window                                 | % (Gauge)           | Data Pipeline    | Computed offline via `ingest/verify_vietnam_data.py` (to be exported via OTel in streaming pipeline)                                                                         |
+| `data_late_records_total`                                      | Total number of records arriving later than their expected time                      | Records (Counter)   | Data Pipeline    | Tracked in streaming ingestion phase (Sprint 2)                                                                                                                               |
 
 #### 5.2. Metric Labels
 
@@ -352,7 +354,7 @@
 | **Retraining failed**     | TO BE FILLED IN   | MLOps            | TO BE FILLED IN |
 | **High CPU usage**        | TO BE FILLED IN   | MLOps            | TO BE FILLED IN |
 | **High memory usage**     | TO BE FILLED IN   | MLOps            | TO BE FILLED IN |
-| **Data quality issue**    | TO BE FILLED IN   | Data Pipeline    | TO BE FILLED IN |
+| **Data quality issue**    | `data_missing_rate > 20%` over a 24h window or schema validation failure | Data Pipeline    | Log warning, flag affected `station_id`, and skip downstream batch update |
 
 ---
 
@@ -464,7 +466,7 @@
 
 | No. | Topic                        | Final decision                                                                                                                                                                                                                                                                                                           | Confirming teams         | Date            |
 | :-- | :--------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------- | :-------------- |
-| 1   | **Feature Table**      | Standardize 7 columns: `station_id`, `event_time`, `pm25_ug_m3`, `temperature_c`, `relative_humidity_pct`, `wind_speed_m_s`, `wind_direction_deg`. Use UTC ISO 8601 timestamps and store Parquet files in MinIO S3 (`s3://raw/`, `s3://features/`). Do not impute missing values in the adapter layer. | Data Pipeline, AI, MLOps | TO BE FILLED IN |
+| 1   | **Feature Table**      | Standardize 8 base columns (`station_id`, `event_time`, `pm25_ug_m3`, `temperature_c`, `relative_humidity_pct`, `wind_speed_m_s`, `wind_direction_deg`, `precipitation_mm`) and 15 engineered columns in `pm25_hourly_features` (adding lags 1h/3h/24h, rolling means 3h/24h, `hour`, `weekday`). Use UTC ISO 8601 timestamps and store Parquet files in MinIO S3 (`s3://raw/`, `s3://features/`). Do not impute missing values in the adapter layer. | Data Pipeline, AI, MLOps | 2026-11-21      |
 | 2   | **Model Interface**    | Forecast PM2.5 one hour ahead. LightGBM is the primary experimental model; Persistence is the baseline. Evaluation metrics are MAE and RMSE. Store models in MLflow Model format.                                                                                                                                        | AI, MLOps                | TO BE FILLED IN |
 | 3   | **Model Registry**     | Use MLflow with PostgreSQL as the backend store and MinIO S3 as the artifact store (`s3://mlflow/`). Use auto-incrementing versions and the `@champion` alias for production serving.                                                                                                                                | MLOps, AI                | TO BE FILLED IN |
 | 4   | **Serving API**        | Build the API with FastAPI and package it in Docker. Load the model from MLflow Model Registry through the `@champion` alias. Support `/predict`, `/health`, and `/docs`.                                                                                                                                        | MLOps, AI                | TO BE FILLED IN |
@@ -484,11 +486,11 @@
 
 ### Final Approval
 
-| Team                    | Representative  | Approval | Approval date   |
-| :---------------------- | :-------------- | :------- | :-------------- |
-| **Data Pipeline** | TO BE FILLED IN | [ ]       | TO BE FILLED IN |
-| **AI**            | TO BE FILLED IN | [ ]       | TO BE FILLED IN |
-| **MLOps**         | TO BE FILLED IN | [ ]       | TO BE FILLED IN |
+| Team                    | Representative                         | Approval | Approval date   |
+| :---------------------- | :------------------------------------- | :------- | :-------------- |
+| **Data Pipeline** | Nguyễn Quốc Tường (`@ngynqt`)          | [X]      | 2026-11-21      |
+| **AI**            | Võ Trần Khiêm (`@KhiemVoTran`)         | [ ]      | TO BE FILLED IN |
+| **MLOps**         | Minh Nguyệt (`@MinhNguyetDuckoo`)      | [ ]      | TO BE FILLED IN |
 
 **Final status:** ☑ Draft  ☐ Under Review  ☐ Approved  ☐ Needs Revision
 **GitHub PR:** TO BE FILLED IN
@@ -504,8 +506,3 @@
 - [ ] Mock components can be used independently.
 - [ ] `CONTRACTS.md` has been merged into the repository.
 - [ ] At least one member from each team has approved the agreement.
-  """
-
-output_path = "/mnt/data/inter_team_technical_agreement_en.md"
-pypandoc.convert_text(md, "md", format="md", outputfile=output_path, extra_args=["--standalone"])
-print(f"Created: {output_path}")

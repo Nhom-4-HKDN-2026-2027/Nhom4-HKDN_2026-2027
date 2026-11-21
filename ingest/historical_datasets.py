@@ -27,6 +27,7 @@ BEIJING_COLUMNS = [
     "relative_humidity_pct",
     "wind_speed_m_s",
     "wind_direction_deg",
+    "precipitation_mm",
 ]
 BEIJING_SOURCE = "https://www.kaggle.com/datasets/sid321axn/beijing-multisite-airquality-data-set"
 BEIJING_UPSTREAM = "https://archive.ics.uci.edu/dataset/501/beijing+multi+site+air+quality+data"
@@ -87,14 +88,14 @@ def download_beijing(destination: Path) -> Path:
 
 
 def normalize_beijing(frame: pd.DataFrame, source_timezone: str) -> pd.DataFrame:
-    """Normalize raw Beijing observations to the seven-column feature contract."""
+    """Normalize raw Beijing observations to the eight-column feature contract."""
     dates = frame[["year", "month", "day", "hour"]].apply(pd.to_numeric, errors="raise")
     if not np.isfinite(dates).all().all() or (dates % 1 != 0).any().any():
         raise ValueError("Calendar fields must be finite integers")
     if not dates.hour.between(0, 23).all():
         raise ValueError("Source hour must be in 0..23")
     timestamps = pd.to_datetime(dates).dt.tz_localize(source_timezone).dt.tz_convert("UTC")
-    numeric = frame[["PM2.5", "TEMP", "DEWP", "WSPM"]].apply(pd.to_numeric, errors="raise")
+    numeric = frame[["PM2.5", "TEMP", "DEWP", "RAIN", "WSPM"]].apply(pd.to_numeric, errors="raise")
     numeric = numeric.replace([np.inf, -np.inf], np.nan).astype("float64")
     temperature, dewpoint = numeric.TEMP, numeric.DEWP
     valid = (temperature > -243.04) & (dewpoint > -243.04) & (dewpoint <= temperature)
@@ -118,6 +119,7 @@ def normalize_beijing(frame: pd.DataFrame, source_timezone: str) -> pd.DataFrame
             ),
             "wind_speed_m_s": numeric.WSPM,
             "wind_direction_deg": directions.map(COMPASS_DEGREES).astype("float64"),
+            "precipitation_mm": numeric.RAIN,
         }
     )
 
@@ -151,7 +153,7 @@ def prepare_beijing(source: Path, output: Path, source_timezone: str = "Asia/Sha
         source_url = "data/sample/beijing_multisite_features.csv (contract CSV override)"
     if list(frame.columns) != BEIJING_COLUMNS or frame.empty:
         raise ValueError(
-            "Beijing input must contain the seven contract columns and at least one row"
+            "Beijing input must contain the eight contract columns and at least one row"
         )
     if (
         frame.station_id.isna().any()
