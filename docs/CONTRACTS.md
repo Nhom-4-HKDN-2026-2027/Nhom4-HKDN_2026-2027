@@ -99,12 +99,12 @@
 | **Model algorithm**    | - Primary experiment: LightGBM Regressor (`LGBMRegressor`)<br>- Baseline for comparison: Persistence model (uses the current PM2.5 value as the forecast for the future)<br>- Current MLOps mock component: `RandomForestClassifier` trained on the Breast Cancer dataset                                                                                                       |
 | **Framework**          | LightGBM / Scikit-Learn                                                                                                                                                                                                                                                                                                                                                             |
 | **Language / version** | Python 3.11                                                                                                                                                                                                                                                                                                                                                                         |
-| **Input features**     | Current baseline notebook experiments use: `pm25_ug_m3`, `hour`, `dayofweek`, PM2.5 lags `pm25_lag1`, `pm25_lag2`, `pm25_lag3`, `pm25_lag6`, `pm25_lag12`, `pm25_lag24`, and weather lags (`temperature_c_lag1`, `relative_humidity_pct_lag1`, `wind_speed_m_s_lag1`, `wind_direction_deg_lag1`). Official feature contract for handoff: TO BE FILLED IN. |
+| **Input features**     | Current baseline notebook experiments use: `pm25_ug_m3`, `hour`, `dayofweek`, PM2.5 lags `pm25_lag1`, `pm25_lag2`, `pm25_lag3`, `pm25_lag6`, `pm25_lag12`, `pm25_lag24`, and weather lags (`temperature_c_lag1`, `relative_humidity_pct_lag1`, `wind_speed_m_s_lag1`, `wind_direction_deg_lag1`). |
 | **Prediction target**  | `predicted_pm25_ug_m3` (PM2.5 concentration at the forecast time)                                                                                                                                                                                                                                                                                                                 |
 | **Forecast horizon**   | 1 hour (1-hour-ahead forecast: `target_time = event_time + 1h`)                                                                                                                                                                                                                                                                                                                   |
 | **Output type**        | FLOAT (non-negative real number: `np.maximum(prediction, 0)`)                                                                                                                                                                                                                                                                                                                     |
 | **Evaluation metrics** | MAE (Mean Absolute Error) and RMSE (Root Mean Squared Error)                                                                                                                                                                                                                                                                                                                        |
-| **Training frequency** | TO BE FILLED IN                                                                                                                                                                                                                                                                                                                                                                     |
+| **Training frequency** | Daily (every 24 )                                                                                                                                                                                                                                                                                                                                                                     |
 
 #### 2.2. Training Interface
 
@@ -115,7 +115,7 @@
 | Parameter      | Data type              | Description                                             |
 | :------------- | :--------------------- | :------------------------------------------------------ |
 | `train_data` | DataFrame              | Training dataset containing features and target         |
-| `config`     | DICT / TO BE FILLED IN | Model training configuration (optional hyperparameters) |
+| `config`     | DICT (Or None)         | Model training configuration (optional hyperparameters) |
 
 **Output:**
 
@@ -123,7 +123,7 @@
 | :---------- | :--------------------- | :--------------------------------------------------- |
 | `model`   | OBJECT                 | Trained model                                        |
 | `metrics` | DICT                   | Evaluation results on the test set (MAE, RMSE, etc.) |
-| `params`  | DICT / TO BE FILLED IN | Hyperparameters used                                 |
+| `params`  | DICT                   | Hyperparameters used                                 |
 
 **Training conventions:**
 
@@ -138,12 +138,12 @@
 
 | Item                               | Agreed Approach                                                                                                                                               |
 | :--------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Input schema**             | TO BE FILLED IN                     |
+| **Input schema**             | `station_id` (STRING), `timestamp` (STRING/ISO-8601), `pm25_ug_m3` (FLOAT), `pm25_lag_1h` (FLOAT), plus optional weather/time features (e.g., `temperature` (FLOAT), `humidity` (FLOAT), `wind_speed` (FLOAT))                     |
 | **Input format**             | JSON / DataFrame                                                                                                                                              |
 | **Output schema**            | `station_id` (STRING), `target_time` (TIMESTAMP), `predicted_pm25_ug_m3` (FLOAT), `model_version` (STRING) *(as proposed in `docs/CONTRACTS.md`)* |
 | **Output format**            | JSON                                                                                                                                                          |
 | **Batch prediction**         | Supported                                                                                                                                                     |
-| **Missing feature handling** | TO BE FILLED IN                                                                                                                                               |
+| **Missing feature handling** | Impute missing `pm25` lags using forward-fill / last known station value (or rolling mean); impute missing weather features using recent station median; reject request with HTTP 422/400 if core identifiers (`station_id`, `timestamp`) or all required features are missing.                                                                                                                                               |
 
 **Example input:**
 
@@ -188,7 +188,7 @@
 - [X] Instructions for loading and predicting (`mlflow.pyfunc.load_model(...)` and FastAPI `POST /predict`)
 - [X] Test input/output examples (13 PM2.5 features array -> list of float predictions)
 
-*Confirmation: AI: TO BE FILLED IN | MLOps: Minh Nguyệt*
+*Confirmation: AI: KhiemVoTran | MLOps: Minh Nguyệt*
 
 ---
 
@@ -311,7 +311,7 @@
 | **Reload after a new version is available** | Call `POST /reload` on the service or restart the API container.                                                |
 | **Model rollback**                          | MLOps changes the `champion` alias in the MLflow UI to the desired previous version and calls `POST /reload`. |
 
-*Confirmation: AI: Trọng Thiện (AI Lead) | MLOps: Minh Nguyệt (MLOps Lead)*
+*Confirmation: AI: Hoàng Thiện (AI Lead) | MLOps: Minh Nguyệt (MLOps Lead)*
 
 ---
 
@@ -377,39 +377,39 @@
 
 | Field                  | Data type | Description                                                           |
 | :--------------------- | :-------- | :-------------------------------------------------------------------- |
-| `event_id`           | STRING    | TO BE FILLED IN                                                       |
-| `event_type`         | STRING    | TO BE FILLED IN                                                       |
-| `model_name`         | STRING    | TO BE FILLED IN                                                       |
-| `model_version`      | STRING    | TO BE FILLED IN                                                       |
-| `detector`           | STRING    | TO BE FILLED IN *(Experiments use `ADWIN` and `DDM`.)*          |
-| `drift_type`         | STRING    | TO BE FILLED IN *(Experiments focus on label / performance drift.)* |
-| `timestamp`          | TIMESTAMP | TO BE FILLED IN                                                       |
-| `trigger_retraining` | BOOLEAN   | TO BE FILLED IN                                                       |
+| `event_id`           | STRING    | Unique identifier (e.g., UUID) for each drift event                                                        |
+| `event_type`         | STRING    | Event category, e.g., `drift_detected` or `drift_check_ok`                                                       |
+| `model_name`         | STRING    | Name of the PM2.5 forecasting model (e.g., `pm25_1h_forecaster`)                                                       |
+| `model_version`      | STRING    | Version of the active model being monitored                                                       |
+| `detector`           | STRING    | Drift detection method used (e.g., `ADWIN`, `DDM`, `PSI`, or `mae_threshold`)          |
+| `drift_type`         | STRING    | Type of drift observed, e.g., `concept_drift`, `data_drift`, or `none` |
+| `timestamp`          | TIMESTAMP | SO-8601 timestamp when the drift event occurred                                                       |
+| `trigger_retraining` | BOOLEAN   | Whether MLOps should initiate a model retraining job (`true`/`false`)                                                       |
 
 #### 6.2. Retraining Policy
 
 | Item                                  | Agreed Approach                                                                                                     |
 | :------------------------------------ | :------------------------------------------------------------------------------------------------------------------ |
-| **Retraining trigger**          | TO BE FILLED IN                                                                                                     |
-| **Drift threshold**             | TO BE FILLED IN *(The Elec2 notebook experiments use `ADWIN(delta=0.002)` and `DDM(warm_start=30)`.)*         |
-| **Periodic retraining**         | TO BE FILLED IN                                                                                                     |
-| **Drift-triggered retraining**  | TO BE FILLED IN                                                                                                     |
-| **Label delay**                 | TO BE FILLED IN *(Marked as TBD in `docs/CONTRACTS.md`.)*                                                       |
-| **Minimum training samples**    | TO BE FILLED IN *(The Elec2 notebook uses a window of 2,000 samples; no PM2.5 requirement has been defined yet.)* |
-| **Retraining dataset window**   | TO BE FILLED IN                                                                                                     |
-| **Retraining frequency**        | TO BE FILLED IN                                                                                                     |
+| **Retraining trigger**          | Drift-triggered (`trigger_retraining = true`) or scheduled periodic retraining                                                                                                     |
+| **Drift threshold**             | Rolling MAE exceeds baseline threshold (e.g., >15–20% degradation) or PSI > 0.2 on key PM2.5/weather features         |
+| **Periodic retraining**         | Enabled — weekly (every 7 days) IN                                                                                                     |
+| **Drift-triggered retraining**  | Enabled — triggered when `trigger_retraining` is `true` (subject to cooldown)                                                                                                     |
+| **Label delay**                 | 1 hour (actual PM2.5 becomes available 1 hour after forecast timestamp)                                                       |
+| **Minimum training samples**    | 720 hourly records (~30 days) for PM2.5 |
+| **Retraining dataset window**   | TLast 90 days of hourly data (chronological split; no shuffling)                                                                                                     |
+| **Retraining frequency**        | Weekly scheduled; drift-triggered capped at once per 24h cooldown                                                                                                     |
 | **Retraining failure handling** | Preserve current @champion model, log stacktrace, and send alert notification to Slack/Email. |
 
 #### 6.3. Model Replacement
 
 | Item                                        | Requirement     |
 | :------------------------------------------ | :-------------- |
-| **New model evaluator(s)**            | TO BE FILLED IN |
-| **Comparison with current model**     | TO BE FILLED IN |
-| **Acceptance criteria**               | TO BE FILLED IN |
+| **New model evaluator(s)**            | AI evaluation module & MLOps runner evaluating candidate vs. `@champion` on recent chronological validation set by MAE |
+| **Comparison with current model**     | Benchmark candidate against current `@champion` on the same recent PM2.5 validation window using MAE and serving latency |
+| **Acceptance criteria**               | Candidate achieves lower MAE than `@champion` (or meets agreed margin without worse peak-PM2.5 error) and passes latency/schema checks |
 | **Authority to promote the champion** | MLOps Lead (Nguyệt) and AI Lead (Thiện) |
 | **Rollback condition**                | When model prediction error spikes abnormally or serving latency exceeds 1s; MLOps switches @champion alias to previous stable version via MLflow UI. |
-| **Retraining history retention**      | TO BE FILLED IN |
+| **Retraining history retention**      | Retain experiment logs, evaluation metrics, and model versions in MLflow for at least 90–180 days (always keeping `@champion` and last known good version) |
 
 #### 6.4. Retraining Workflow
 
@@ -422,7 +422,7 @@
 7. AI and MLOps evaluate the new model.
 8. MLOps deploys the new model or rolls back.
 
-*(Current status: TO BE FILLED IN – This workflow has not yet been implemented as an automated process.)*
+*(Current status: Draft / Not Yet Automated – This workflow has not yet been implemented as an automated process.)*
 
 ---
 
@@ -495,7 +495,7 @@
 | Team                    | Representative                         | Approval | Approval date   |
 | :---------------------- | :------------------------------------- | :------- | :-------------- |
 | **Data Pipeline** | Nguyễn Quốc Tường (`@ngynqt`)          | [x]      | 2026-11-21      |
-| **AI**            | Võ Trần Khiêm (`@KhiemVoTran`)         | [ ]      | TO BE FILLED IN |
+| **AI**            | Võ Trần Khiêm (`@KhiemVoTran`)         | [x]      | 2026-11-22|
 | **MLOps**         | Minh Nguyệt (`@MinhNguyetDuckoo`)      | [x]      | 2026-11-21      |
 
 **Final status:** ☐ Draft  ☑ Approved  
