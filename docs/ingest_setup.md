@@ -134,7 +134,7 @@ The handoff file is [data/sample/beijing_multisite_features.csv](../data/sample/
 
 ### Contract mapping
 
-The CSV uses exactly the seven feature columns in `docs/CONTRACTS.md` §3.2:
+The CSV uses the eight base feature columns in `docs/CONTRACTS.md` §1.2:
 
 | Contract column | Source / transformation | Unit |
 |---|---|---|
@@ -145,6 +145,7 @@ The CSV uses exactly the seven feature columns in `docs/CONTRACTS.md` §3.2:
 | `relative_humidity_pct` | Derived from `TEMP` and `DEWP` | % |
 | `wind_speed_m_s` | `WSPM`, unchanged | m/s |
 | `wind_direction_deg` | `wd`, 16-point compass mapping | Degrees clockwise from north |
+| `precipitation_mm` | `RAIN`, unchanged | mm |
 
 **Timezone assumption:** the UCI page does not explicitly state a timezone. The default interprets calendar fields as local Beijing time, `Asia/Shanghai` (UTC+8 for the dataset period), then converts to UTC. Thus source `2015-11-15 08:00` becomes `2015-11-15T00:00:00Z`. The default UTC sample corresponds to local `[2015-11-15 08:00, 2015-11-22 08:00)`. This assumption is recorded in metadata and must be confirmed before cross-source temporal comparisons; use `--source-timezone` if authoritative clarification differs.
 
@@ -156,7 +157,7 @@ RH = 100 × exp(17.625 × Td / (243.04 + Td) − 17.625 × T / (243.04 + T))
 
 `T=TEMP` and `Td=DEWP` are in Celsius. This is a derived approximation, not directly observed RH or an ice-relative calculation below freezing. Missing/nonfinite inputs, `Td > T`, singular/nonpositive denominators or invalid results produce NaN; humidity is not clipped or imputed. The raw inputs remain in the source archive. The formula is intended for meteorological temperatures, not arbitrary extreme values.
 
-Wind uses the standard [16-point compass bearings](https://www.weather.gov/media/mqt/FireWx/MQT%20Fire%20Wx%20AOP%202020%20-%20Final%20Version.pdf): N=0, NNE=22.5, NE=45, …, NNW=337.5. These represent the direction **from which** wind blows. Missing directions stay NaN; unknown nonmissing tokens raise an error. `RAIN` is not added because it is not in the seven-column feature contract; raw precipitation remains available in the archive.
+Wind uses the standard [16-point compass bearings](https://www.weather.gov/media/mqt/FireWx/MQT%20Fire%20Wx%20AOP%202020%20-%20Final%20Version.pdf): N=0, NNE=22.5, NE=45, …, NNW=337.5. These represent the direction **from which** wind blows. Missing directions stay NaN; unknown nonmissing tokens raise an error. `RAIN` is mapped directly to `precipitation_mm` (mm).
 
 ### Shared downstream adapter
 
@@ -175,13 +176,13 @@ beijing_features = normalize_feature_table(
 )
 ```
 
-Both return exactly seven columns: `station_id` as pandas string, `event_time` as timezone-aware UTC datetime, and five float columns. The Vietnam adapter performs a one-to-one left join on normalized station/time keys. Missing weather remains NaN with a warning; PM2.5 rows are preserved. Naive/invalid/non-hourly timestamps, missing IDs, duplicate keys, nonnumeric values and infinities are rejected. Numeric NaN and finite source values, including negatives, remain available for quality assessment; this adapter does not define experiment acceptance or imputation policies. Contract names and units are unchanged.
+Both return eight columns: `station_id` as pandas string, `event_time` as timezone-aware UTC datetime, and six float columns. The Vietnam adapter performs a one-to-one left join on normalized station/time keys. Missing weather remains NaN with a warning; PM2.5 rows are preserved. Naive/invalid/non-hourly timestamps, missing IDs, duplicate keys, nonnumeric values and infinities are rejected. Numeric NaN and finite source values, including negatives, remain available for quality assessment; this adapter does not define experiment acceptance or imputation policies. Contract names and units are unchanged.
 
 Verified source archive SHA-256:
 `b04da438b2f331ac0ffd45aebdfec0d20d2367feb5f6948c4b1f7ce1191e33c4`
 
 Handoff CSV SHA-256:
-`525ba52fbde3001bd2f80f901911f77dd3d003f32a8d8a0d40698301545ed162`
+`b29711ebc1b3b0adb553ad396eb15fd6c693841a2e22fcf980ac8004392b4aca`
 
 ## 7. File structure and responsibilities
 
@@ -193,7 +194,7 @@ Handoff CSV SHA-256:
 | `ingest/fetch_openmeteo.py` | Fetch ERA5 weather at selected station coordinates and validate hourly timestamps and units while retaining permitted missing values. |
 | `ingest/fetch_beijing.py` | Download/read the UCI Multi-Site archive and extract a seven-day sample with derived humidity, wind bearings and UTC timestamps. |
 | `ingest/verify_vietnam_data.py` | Run the Vietnam CLI: coordinate fetching, verify cached data and provenance, and produce quality summaries, gaps and samples. |
-| `ingest/feature_contract.py` | Join Vietnam PM2.5/weather and normalize Vietnam and Beijing tables to the same seven-column downstream contract. |
+| `ingest/feature_contract.py` | Join Vietnam PM2.5/weather and normalize Vietnam and Beijing tables to the same eight-column downstream contract. |
 | `ingest/pipeline_config.py` | Load and validate pipeline configuration and resolve repository-relative paths. |
 | `ingest/vietnam_pipeline.toml` | Define Vietnam evaluation/sample windows, screening parameters, weather model and output paths; contains no API key. |
 | `ingest/__init__.py` | Expose selected ingestion and quality functions as package imports. |

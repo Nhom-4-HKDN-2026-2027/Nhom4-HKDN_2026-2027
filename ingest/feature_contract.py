@@ -14,6 +14,7 @@ FEATURE_COLUMNS = [
     "relative_humidity_pct",
     "wind_speed_m_s",
     "wind_direction_deg",
+    "precipitation_mm",
 ]
 
 
@@ -39,7 +40,7 @@ def _normalize_keys(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def normalize_feature_table(frame: pd.DataFrame) -> pd.DataFrame:
-    """Return seven contract columns with string IDs, UTC timestamps and float values.
+    """Return eight contract columns with string IDs, UTC timestamps and float values.
 
     Missing numeric values remain NaN. This is a schema adapter, not an outlier
     filter or imputer. Extra source metadata is omitted from the feature view.
