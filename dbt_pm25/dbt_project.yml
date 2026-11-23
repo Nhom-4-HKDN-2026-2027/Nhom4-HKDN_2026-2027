@@ -1,0 +1,33 @@
+
+name: 'pm25_features'
+version: '1.0.0'
+config-version: 2
+
+profile: 'pm25_features'
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  pm25_features:
+
+    staging:
+      +materialized: view
+
+    intermediate:
+      +materialized: view
+
+    marts:
+      +materialized: table
+
+seeds:
+  pm25_features:
+    vn_holidays:
+      +column_types:
+        holiday_date: DATE
+        holiday_name: VARCHAR
