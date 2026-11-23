@@ -26,6 +26,7 @@ def source_frame(periods=1, station="Aotizhongxin"):
             "PM2.5": 25,
             "TEMP": 20.0,
             "DEWP": 10.0,
+            "RAIN": 0.5,
             "WSPM": 2.0,
             "wd": "NNW",
         }
@@ -56,6 +57,7 @@ def test_contract_units_timezone_and_string_station_id():
     assert result.iloc[0].event_time == "2015-11-15T00:00:00Z"
     assert result.iloc[0].wind_direction_deg == 337.5
     assert result.iloc[0].wind_speed_m_s == 2.0
+    assert result.iloc[0].precipitation_mm == 0.5
     assert result.iloc[0].relative_humidity_pct == pytest.approx(52.5413, abs=0.001)
 
 
@@ -83,7 +85,7 @@ def test_all_compass_directions(direction, degrees):
 
 def test_missing_weather_does_not_drop_rows_or_impute_pm25():
     source = source_frame(2)
-    source.loc[0, ["PM2.5", "TEMP", "DEWP", "WSPM", "wd"]] = np.nan
+    source.loc[0, ["PM2.5", "TEMP", "DEWP", "RAIN", "WSPM", "wd"]] = np.nan
     source.loc[1, "PM2.5"] = -1
     result = bj.normalize_beijing(source)
     assert len(result) == 2
