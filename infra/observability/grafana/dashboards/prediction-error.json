@@ -1,8 +1,8 @@
 {
   "uid": "prediction-error-provisioned",
-  "title": "Nhom 4 - MLOps — Prediction Error Demo",
+  "title": "Nhom 4 - MLOps — Prediction Quality Demo",
   "schemaVersion": 40,
-  "version": 1,
+  "version": 2,
   "refresh": "5s",
   "time": {
     "from": "now-5m",
@@ -11,42 +11,124 @@
   "panels": [
     {
       "id": 1,
-      "title": "Mean Absolute Prediction Error — Demo",
-      "description": "Synthetic data. Rolling one-minute mean absolute error.",
+      "title": "MAE — rolling 1 minute",
+      "description": "Synthetic normalized targets. Evaluated only after labels arrive.",
       "type": "timeseries",
-      "gridPos": {
-        "h": 12,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus-provisioned"
-      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus-provisioned"},
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(prediction_error_sum[1m])) / sum(rate(prediction_error_count[1m]))",
-          "legendFormat": "Mean absolute error",
+          "expr": "sum(rate(model_prediction_error_sum[1m])) / sum(rate(model_prediction_error_count[1m]))",
+          "legendFormat": "MAE",
           "range": true
         }
       ],
       "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "min": 0
-        },
+        "defaults": {"unit": "none", "min": 0},
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "title": "RMSE — rolling 1 minute",
+      "description": "Square root of the mean squared error on delivered labels.",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus-provisioned"},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sqrt(sum(rate(model_prediction_squared_error_sum[1m])) / sum(rate(model_prediction_squared_error_count[1m])))",
+          "legendFormat": "RMSE",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "none", "min": 0},
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "title": "Forecasts awaiting labels",
+      "description": "Current number of unevaluated forecasts in the running demo.",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus-provisioned"},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(model_prediction_labels_pending)",
+          "legendFormat": "Pending labels",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "short", "min": 0},
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "title": "Mean label delay — rolling 1 minute",
+      "description": "Simulated label delay of 5–20 seconds after the target observation.",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus-provisioned"},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(model_prediction_label_delay_seconds_sum[1m])) / sum(rate(model_prediction_label_delay_seconds_count[1m]))",
+          "legendFormat": "Mean label delay",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "s", "min": 0},
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "title": "Created forecasts — process lifetime",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 12, "x": 0, "y": 16},
+      "datasource": {"type": "prometheus", "uid": "prometheus-provisioned"},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(model_predictions_created_total)",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "short", "min": 0},
         "overrides": []
       },
       "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
+        "reduceOptions": {"calcs": ["lastNotNull"], "values": false}
+      }
+    },
+    {
+      "id": 6,
+      "title": "Matched labels — process lifetime",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 12, "x": 12, "y": 16},
+      "datasource": {"type": "prometheus", "uid": "prometheus-provisioned"},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(model_prediction_labels_received_total)",
+          "instant": true
         }
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "short", "min": 0},
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {"calcs": ["lastNotNull"], "values": false}
       }
     }
   ]
