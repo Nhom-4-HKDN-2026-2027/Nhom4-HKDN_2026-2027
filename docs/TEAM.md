@@ -124,6 +124,15 @@ Please only modify the checklist under your name to minimize merge conflicts.
 - [X] Verify Redpanda is healthy using `docker compose ps`
 - [X] Create a small Pull Request
 - [X] Get the Pull Request reviewed and merged into `main`
+- [X] Install Git
+- [X] Install Docker Desktop
+- [X] Install Python 3.11+
+- [X] Install VS Code
+- [X] Clone the project repository
+- [X] Run `docker compose up` successfully
+- [X] Verify Redpanda is healthy using `docker compose ps`
+- [X] Create a small Pull Request
+- [X] Get the Pull Request reviewed and merged into `main`
 
 ---
 
