@@ -1,221 +1,246 @@
-# Nghiên cứu phương pháp cập nhật thích ứng mô hình học máy trong quy trình dữ liệu tự động
+# Research on Adaptive Machine Learning Model Updating in Automated Data Pipelines
 
-**Người thực hiện:** Nguyễn Tố Quyên (`Quyen0005`)  
-**Dự án:** Adaptive Model Updating in Automated Data Pipelines  
+## 1. Introduction to the Research Problem
 
----
+In real-world machine learning systems, data frequently changes over time. Such changes may cause models trained on historical data to gradually lose predictive accuracy. This phenomenon is commonly referred to as Concept Drift.
 
-## 1. Giới thiệu vấn đề nghiên cứu
+To maintain model performance, a system must be able to monitor data changes, detect signs of performance degradation, and determine when to update or retrain a model (Model Retraining). However, retraining too frequently can increase computational costs, processing time, and system resource consumption. Conversely, if updates are too slow, the model may continue to produce inaccurate predictions.
 
-Trong các hệ thống học máy được triển khai thực tế, dữ liệu thường xuyên thay đổi theo thời gian. Sự thay đổi này có thể khiến mô hình được huấn luyện trên dữ liệu cũ dần mất khả năng dự đoán chính xác. Hiện tượng này thường được gọi là **Concept Drift**.
+Therefore, the research problem involves not only detecting Concept Drift, but also determining when a model should be updated, which method should be used, and how predictive performance can be balanced against operational costs.
 
-Để duy trì hiệu suất của mô hình, hệ thống cần có khả năng theo dõi sự thay đổi của dữ liệu, phát hiện dấu hiệu suy giảm hiệu suất và quyết định thời điểm cập nhật hoặc huấn luyện lại mô hình (**Model Retraining**). Tuy nhiên, việc huấn luyện lại quá thường xuyên có thể làm tăng chi phí tính toán, thời gian xử lý và tài nguyên hệ thống. Ngược lại, nếu cập nhật quá chậm, mô hình có thể tiếp tục đưa ra dự đoán kém chính xác.
+This study focuses on adaptive machine learning model updating methods in automated data pipelines, aiming to maintain model performance as data changes over time while taking system resource and latency constraints into account.
 
-Vì vậy, vấn đề nghiên cứu không chỉ nằm ở việc phát hiện Concept Drift mà còn ở việc xác định:
-- Khi nào cần cập nhật mô hình?
-- Cập nhật bằng phương pháp nào?
-- Làm thế nào để cân bằng giữa hiệu suất dự đoán với chi phí vận hành?
+## 2. Theoretical Background
 
-Đề tài tập trung nghiên cứu các phương pháp cập nhật thích ứng mô hình học máy trong quy trình dữ liệu tự động, hướng đến khả năng duy trì hiệu suất mô hình khi dữ liệu thay đổi theo thời gian, đồng thời cân nhắc các giới hạn về tài nguyên và độ trễ của hệ thống.
+| Concept | Item | Role in the Research |
+| --- | --- | --- |
+| Concept Drift | A change over time in relationships or data distributions that may degrade the performance of the current model. | Defines the problem to be detected and addressed. |
+| Data Drift | A change over time in the distribution of input data. | Monitors changes in data within the pipeline. |
+| Drift Detection | The use of statistical methods or performance metrics to detect changes. | Provides signals for model evaluation and updating. |
+| Model Retraining | Retraining a model using new or recent data. | Restores or improves predictive performance. |
+| Incremental Learning | Updating a model incrementally as new data arrives, rather than retraining it entirely. | An adaptive approach that may reduce the need for full retraining. |
+| Adaptive Learning | The ability to adjust a model or learning strategy to adapt to a changing data environment. | The overall direction of this project. |
+| Prequential Evaluation | Sequential evaluation: make predictions first, then use actual labels to calculate errors and update. | Suitable for evaluating models on sequential data streams. |
+| Retraining Cost | Resource, time, and processing costs incurred during retraining. | A factor to consider when selecting an update policy. |
 
----
+## 3. Analysis of Two Key Studies
 
-## 2. Cơ sở lý thuyết
+### 3.1. Study 1: When to Retrain: An Empirical Study of Retraining Policies for Streaming ML Under Concept Drift, Budget, and Latency Constraints (2026)
 
-| Khái niệm | Nội dung | Vai trò trong nghiên cứu |
-| :--- | :--- | :--- |
-| **Concept Drift** | Sự thay đổi của mối quan hệ hoặc phân phối dữ liệu theo thời gian, có thể khiến mô hình hiện tại suy giảm hiệu suất. | Xác định vấn đề cần phát hiện và xử lý. |
-| **Data Drift** | Sự thay đổi trong phân phối dữ liệu đầu vào theo thời gian. | Theo dõi sự thay đổi của dữ liệu trong pipeline. |
-| **Drift Detection** | Quá trình sử dụng các phương pháp thống kê hoặc chỉ số hiệu suất để phát hiện sự thay đổi. | Cung cấp tín hiệu cho quá trình đánh giá và cập nhật mô hình. |
-| **Model Retraining** | Huấn luyện lại mô hình bằng dữ liệu mới hoặc dữ liệu gần đây. | Khôi phục hoặc cải thiện hiệu suất dự đoán. |
-| **Incremental Learning** | Cập nhật mô hình từng phần khi có dữ liệu mới, thay vì huấn luyện lại toàn bộ. | Là một hướng thích ứng có thể giảm nhu cầu retraining toàn phần. |
-| **Adaptive Learning** | Khả năng điều chỉnh mô hình hoặc chiến lược học tập để thích nghi với môi trường dữ liệu thay đổi. | Là định hướng tổng thể của đề tài. |
-| **Prequential Evaluation** | Đánh giá theo trình tự: dự đoán trước, sau đó mới sử dụng nhãn thực tế để tính lỗi và cập nhật. | Phù hợp với việc đánh giá mô hình trên luồng dữ liệu tuần tự. |
-| **Retraining Cost** | Chi phí tài nguyên, thời gian và xử lý phát sinh khi huấn luyện lại mô hình. | Là yếu tố cần cân nhắc khi lựa chọn chính sách cập nhật. |
+| Criteria | Analysis |
+| --- | --- |
+| Authors | Sawan Dasari |
+| Objective | Investigates when to retrain models in streaming-data environments with Concept Drift, limited retraining budgets, and training/deployment latency. |
+| Method | Compares Periodic Retraining, Error-threshold Retraining, ADWIN-triggered Retraining, and No-retrain. |
+| Experimental Data | Synthetic data, LUFlow, and LendingClub. |
+| Experimental Setup | Three drift types: abrupt, gradual, and recurring; multiple budget and latency levels; comparison of models with and without Incremental Learning. |
+| Main Results | When the model updates each sample through Incremental Learning, practical differences between retraining policies are not significant for the studied linear models and immediate-label setting. Without Incremental Learning, retraining-policy choice significantly affects post-drift performance. |
+| Notable Findings | Periodic Retraining performs better than reactive methods in many abrupt and gradual drift cases without Incremental Learning. Reactive methods retain advantages in some recurring-drift cases. |
+| Limitations | Results depend on linear models, the update mechanism, and the assumption of immediate labels. They cannot be assumed to generalize to other models or delayed-label environments. |
+| Relevance to This Project | Provides a basis for comparing model-update policies and highlights the need to evaluate Incremental Learning, retraining costs, and deployment latency. |
 
----
+Commentary: The study shows that no single retraining policy is optimal in every situation. Effectiveness depends on the type of drift, the ability to update incrementally, budget, and latency. Therefore, this project should evaluate update policies under specific operating conditions rather than relying solely on model accuracy.
 
-## 3. Phân tích hai nghiên cứu chính
+### 3.2. Study 2: Cost-Effective Retraining of Machine Learning Models / Cost-aware retraining for machine learning (2023–2024)
 
-### 3.1. Nghiên cứu 1: When to Retrain: An Empirical Study of Retraining Policies for Streaming ML Under Concept Drift, Budget, and Latency Constraints (2026)
+| Criteria | Analysis |
+| --- | --- |
+| Authors | Ananth Mahadevan and Michael Mathioudakis |
+| Publication | Preprint in 2023; published in Knowledge-Based Systems in 2024 as Cost-aware retraining for machine learning. |
+| Objective | Develops a method for deciding whether to retrain a model or continue using the current model by balancing model-obsolescence costs against retraining costs. |
+| Method | Proposes the Cost-Aware Retraining Algorithm (CARA), with variants CARA-T, CARA-CT, and CARA-P. |
+| Decision Basis | Considers performance degradation on prediction queries and the resources required for retraining. |
+| Experimental Data | Synthetic and real-world datasets, including Electricity, Covertype, and Airlines. |
+| Main Results | CARA balances cost and performance; in reported experiments, it achieved query accuracy comparable to or better than baseline drift-detection methods while making fewer retraining decisions in many cases. |
+| Notable Findings | CARA-P is a periodic update policy that may work well when data or queries are cyclical, but may cause unnecessary retraining when clear cyclicality is absent. |
+| Limitations | Pairwise similarity computation can be resource-intensive for large datasets; retraining costs are assumed fixed in some settings. |
+| Relevance to This Project | Provides a basis for update policies that consider not only drift signals but also the practical costs and benefits of retraining. |
 
-| Tiêu chí | Nội dung phân tích |
-| :--- | :--- |
-| **Tác giả** | Sawan Dasari |
-| **Mục tiêu** | Nghiên cứu thời điểm phù hợp để huấn luyện lại mô hình trong môi trường dữ liệu luồng có Concept Drift, ngân sách retraining giới hạn và độ trễ huấn luyện, triển khai. |
-| **Phương pháp** | So sánh Periodic Retraining, Error-threshold Retraining, ADWIN-triggered Retraining và No-retrain. |
-| **Dữ liệu thực nghiệm** | Dữ liệu tổng hợp, LUFlow và LendingClub. |
-| **Thiết lập thực nghiệm** | 3 dạng drift: abrupt, gradual và recurring; nhiều mức ngân sách và độ trễ; so sánh mô hình có và không có Incremental Learning. |
-| **Kết quả chính** | Khi mô hình có cập nhật từng mẫu bằng Incremental Learning, sự khác biệt thực tiễn giữa các chính sách retraining không đáng kể trong phạm vi mô hình tuyến tính và nhãn đến ngay được nghiên cứu. Khi không có Incremental Learning, lựa chọn chính sách retraining ảnh hưởng đáng kể đến hiệu suất sau drift. |
-| **Phát hiện đáng chú ý** | Periodic Retraining hoạt động tốt hơn các phương pháp phản ứng trong nhiều trường hợp abrupt và gradual drift ở thiết lập không có Incremental Learning. Các phương pháp phản ứng vẫn có lợi thế trong một số trường hợp recurring drift. |
-| **Hạn chế** | Kết quả phụ thuộc vào mô hình tuyến tính, cơ chế cập nhật và giả định nhãn đến ngay. Không thể mặc định kết quả sẽ giống nhau với mô hình khác hoặc môi trường có nhãn đến trễ. |
-| **Giá trị đối với đề tài** | Cung cấp cơ sở để so sánh các chính sách cập nhật mô hình, đồng thời cho thấy cần đánh giá cả Incremental Learning, chi phí retraining và độ trễ triển khai. |
+Commentary: This study extends the approach from drift detection to cost-aware update decisions. It provides an important basis for considering resources, training time, and performance improvements when deciding whether to update a model.
 
-> **Nhận xét:** Nghiên cứu cho thấy không có một chính sách retraining tối ưu cho mọi tình huống. Hiệu quả phụ thuộc vào loại drift, khả năng cập nhật từng phần, ngân sách và độ trễ. Vì vậy, đề tài cần đánh giá chính sách cập nhật trong điều kiện vận hành cụ thể thay vì chỉ dựa vào độ chính xác của mô hình.
+## 4. Summary of Five Supporting Studies
 
-### 3.2. Nghiên cứu 2: Cost-Effective Retraining of Machine Learning Models / Cost-aware retraining for machine learning (2023–2024)
+| No. | Study | Key Content | Relevance to This Project |
+| --- | --- | --- | --- |
+| 1 | Grzenda et al. (2020) – Delayed Labelling Evaluation for Data Streams | • Evaluates models on data streams where actual labels do not arrive immediately after prediction.<br>• Emphasizes verification latency: the time between prediction and label confirmation.<br>• Evaluation must associate predictions with labels only when labels become available; future labels must not be used prematurely for error calculation or updates.<br>• Project relevance: test label delays of 0, 24, and 72 hours to measure their effects on performance monitoring and retraining decisions. | Helps model delayed labels and determine when MAE/RMSE can be calculated, models updated, or error-based signals generated. |
+| 2 | Bayram, Ahmed & Kassler (2022) – From Concept Drift to Model Degradation: An Overview on Performance-Aware Drift Detectors | • Reviews performance-based detectors that use changes in error or prediction quality to identify model degradation.<br>• Distinguishes changes in data distribution from actual model-performance degradation; these phenomena are related but not identical.<br>• Helps classify monitoring signals and select detectors based on label availability.<br>• Project relevance: combine feature drift (e.g., PSI/ADWIN on features) with error monitoring when labels arrive; DDM is a supervised error-based detector. | Supports drift-monitoring choices, distinguishes data drift from model degradation, and clarifies detector label requirements. |
+| 3 | Cerqueira, Torgo & Mozetič (2020) – Evaluating Time Series Forecasting Models: An Empirical Study on Performance Estimation Methods | • Studies how to estimate time-series forecasting performance using different evaluation methods.<br>• Compares evaluation approaches such as cross-validation and out-of-sample evaluation for time series.<br>• Emphasizes preserving chronological order and preventing future information from entering the training set.<br>• Project relevance: use temporal split/rolling-origin for PM2.5; weather features must be information available at prediction time. | Provides a basis for temporal validation and leakage control in one-hour-ahead PM2.5 forecasting. |
+| 4 | Demšar (2006) – Statistical Comparisons of Classifiers over Multiple Data Sets | • Presents a framework for statistically comparing machine-learning algorithms across datasets.<br>• Recommends the Friedman test for comparing multiple methods across datasets and the Wilcoxon signed-rank test for pairwise comparisons.<br>• Recommends post-hoc testing to identify differing method pairs and control for multiple comparisons.<br>• Project relevance: compare retraining policies using the same dataset, drift scenario, label delay, and seed; report effect sizes and p-values. | Provides a statistical basis for comparing policies rather than relying solely on mean MAE/RMSE. |
+| 5 | Souza et al. (2020) – Challenges in Benchmarking Stream Learning Algorithms with Real-world Data | • Discusses challenges in benchmarking algorithms on real-world stream data.<br>• Emphasizes sequentiality, temporal dependence, and source-specific characteristics when designing evaluations.<br>• Suggests checking label quality, distributions, representativeness, and dataset suitability for the benchmark task.<br>• Project relevance: use Elec2 for classification/label-based drift and Beijing and Vietnam for PM2.5 forecasting; keep the two tasks separate. | Suggests assessing dataset suitability and keeping the Elec2 stream-classification benchmark separate from PM2.5 regression. |
 
-| Tiêu chí | Nội dung phân tích |
-| :--- | :--- |
-| **Tác giả** | Ananth Mahadevan và Michael Mathioudakis |
-| **Công bố** | Bản tiền xuất bản năm 2023; bài báo đăng trên Knowledge-Based Systems năm 2024 với tên Cost-aware retraining for machine learning. |
-| **Mục tiêu** | Xây dựng phương pháp quyết định có nên huấn luyện lại mô hình hay tiếp tục sử dụng mô hình hiện tại dựa trên sự cân bằng giữa chi phí mô hình lỗi thời và chi phí retraining. |
-| **Phương pháp** | Đề xuất Cost-Aware Retraining Algorithm (CARA), với các biến thể CARA-T, CARA-CT và CARA-P. |
-| **Cơ sở quyết định** | Xem xét mức suy giảm hiệu suất trên các truy vấn dự đoán và chi phí tài nguyên cần thiết để huấn luyện lại. |
-| **Dữ liệu thực nghiệm** | Các bộ dữ liệu tổng hợp và dữ liệu thực tế như Electricity, Covertype và Airlines. |
-| **Kết quả chính** | CARA có khả năng cân bằng chi phí và hiệu suất; trong các thực nghiệm được báo cáo, CARA đạt độ chính xác truy vấn tương đương hoặc tốt hơn các phương pháp phát hiện drift cơ sở trong khi đưa ra ít quyết định retraining hơn ở nhiều trường hợp. |
-| **Phát hiện đáng chú ý** | CARA-P là chính sách cập nhật định kỳ, có thể hoạt động tốt khi dữ liệu hoặc truy vấn có tính chu kỳ nhưng có thể gây retraining không cần thiết khi không tồn tại tính chu kỳ rõ ràng. |
-| **Hạn chế** | Việc tính toán độ tương đồng theo cặp có thể tốn tài nguyên khi dữ liệu lớn; chi phí retraining trong nghiên cứu được giả định cố định ở một số thiết lập. |
-| **Giá trị đối với đề tài** | Cung cấp cơ sở để nghiên cứu chính sách cập nhật không chỉ dựa trên tín hiệu drift mà còn cân nhắc chi phí và lợi ích thực tế của việc retraining. |
+## 5. Comparison and Critical Analysis
 
-> **Nhận xét:** Nghiên cứu mở rộng cách tiếp cận từ phát hiện drift sang ra quyết định cập nhật có xét đến chi phí. Đây là cơ sở quan trọng để đề tài xem xét thêm tài nguyên, thời gian huấn luyện và mức cải thiện hiệu suất khi lựa chọn cập nhật mô hình.
+| Criteria | Study When to Retrain (2026) | Study CARA (2024) | Overall Assessment |
+| --- | --- | --- | --- |
+| Focus | Compares retraining policies under drift, budget, and latency constraints. | Optimizes the Retrain-or-Keep decision based on cost. | The two studies approach the problem from complementary perspectives. |
+| Decision Mechanism | Periodic schedules, error thresholds, and the ADWIN detector. | Model-obsolescence costs and retraining costs. | Change detection can be combined with an assessment of update benefits. |
+| Resource Considerations | Emphasizes retraining budgets and latency. | Emphasizes model-obsolescence costs and retraining resources. | Both computational costs and predictive effectiveness should be considered. |
+| Adaptability | Also compares Incremental Learning and retraining policies. | Makes update decisions based on data, queries, and costs. | The appropriate method must be identified for each model and data type. |
+| Limitations | Limited by model scope, the immediate-label assumption, and experimental setup. | Measurement computational costs and assumptions about retraining costs. | Must be validated in the project pipeline and datasets. |
 
----
+The following observations can be drawn from these studies:
 
-## 4. Tổng hợp năm nghiên cứu bổ trợ
+- Detecting Concept Drift does not necessarily mean that retraining must be performed immediately. A data change should trigger an update only when there is evidence that the update provides an appropriate benefit.
+- Retraining policies should be evaluated simultaneously in terms of predictive performance, number of updates, training time, and resource consumption.
+- Data and model characteristics substantially affect the effectiveness of update methods.
+- For time-series data, splitting and evaluation must preserve chronological order.
+- Label delay may affect when performance degradation can be detected and how the model can be evaluated.
 
-| STT | Nghiên cứu | Nội dung chính | Giá trị đối với đề tài |
-| :---: | :--- | :--- | :--- |
-| 1 | **Grzenda et al. (2020)** – Nghiên cứu đánh giá luồng dữ liệu có nhãn đến trễ | Phân tích vấn đề nhãn thực tế không xuất hiện ngay sau khi dữ liệu được dự đoán; việc đánh giá có thể cần xem xét thời điểm nhãn đến và các lần đánh giá lại. | Giúp xác định ảnh hưởng của độ trễ nhãn đến quá trình đánh giá mô hình và quyết định cập nhật. |
-| 2 | **Bayram, Ahmed & Kassler (2022)** – From Concept Drift to Model Degradation: An Overview on Performance-Aware Drift Detectors | Tổng hợp, phân loại các dạng Concept Drift và phương pháp phát hiện drift dựa trên sự suy giảm hiệu suất mô hình. | Hỗ trợ lựa chọn cách theo dõi hiệu suất và phân biệt giữa phát hiện thay đổi dữ liệu với phát hiện suy giảm mô hình. |
-| 3 | **Cerqueira, Torgo & Mozetič (2020)** – Evaluating Time Series Forecasting Models: An Empirical Study on Performance Estimation Methods | So sánh các phương pháp đánh giá dự báo chuỗi thời gian, bao gồm cross-validation, out-of-sample và prequential. | Là cơ sở lựa chọn cách chia dữ liệu theo thời gian và đánh giá mô hình dự báo PM2.5, tránh làm sai lệch thứ tự thời gian. |
-| 4 | **Demšar (2006)** – Statistical Comparisons of Classifiers over Multiple Data Sets | Trình bày các phương pháp kiểm định thống kê để so sánh thuật toán học máy trên nhiều bộ dữ liệu, trong đó có Wilcoxon và Friedman. | Hỗ trợ xây dựng phương pháp so sánh kết quả thực nghiệm có cơ sở thống kê. |
-| 5 | **Souza et al. (2020)** – Nghiên cứu về benchmark dữ liệu luồng và kho dữ liệu stream | Nhấn mạnh những vấn đề khi sử dụng dữ liệu luồng thực tế, bao gồm tính tuần tự, sự phụ thuộc thời gian và đặc điểm của từng bộ dữ liệu. | Gợi ý kiểm tra tính phù hợp của Elec2, đặc biệt là thứ tự thời gian, nhãn và baseline trước khi đánh giá drift. |
+## 6. Research Gaps
 
----
+Based on the reviewed studies, several issues warrant further investigation within the scope of this project:
 
-## 5. So sánh và phân tích phản biện
+- Insufficient joint evaluation of performance and cost: Many methods focus on drift detection or accuracy improvement, while retraining costs and deployment latency also directly affect system effectiveness.
+- Dependence on data characteristics: A policy may perform well under one type of drift but poorly under another. Therefore, evaluation is needed across datasets and tasks.
+- Delayed labels: In real-world environments, labels may not arrive immediately after prediction, affecting performance monitoring and update decisions.
+- Distinction between drift detection and retraining decisions: Detecting a change does not necessarily mean that the model has degraded to the point where retraining is required.
+- Integration into automated pipelines: Update decisions must be connected to data ingestion, model evaluation, version management, and deployment.
 
-| Tiêu chí | Nghiên cứu When to Retrain (2026) | Nghiên cứu CARA (2024) | Nhận xét tổng hợp |
-| :--- | :--- | :--- | :--- |
-| **Trọng tâm** | So sánh các chính sách retraining trong điều kiện drift, ngân sách và độ trễ. | Tối ưu quyết định Retrain hoặc Keep dựa trên chi phí. | Hai nghiên cứu tiếp cận vấn đề từ hai góc độ bổ sung cho nhau. |
-| **Cơ chế quyết định** | Lịch định kỳ, ngưỡng lỗi và bộ phát hiện ADWIN. | Chi phí lỗi thời của mô hình và chi phí retraining. | Có thể kết hợp tư duy phát hiện thay đổi với đánh giá lợi ích cập nhật. |
-| **Yếu tố tài nguyên** | Nhấn mạnh ngân sách retraining và độ trễ. | Nhấn mạnh chi phí mô hình lỗi thời và tài nguyên retraining. | Cần xem xét cả chi phí tính toán lẫn hiệu quả dự đoán. |
-| **Khả năng thích ứng** | So sánh thêm Incremental Learning và các chính sách retraining. | Đưa ra quyết định cập nhật dựa trên dữ liệu, truy vấn và chi phí. | Cần xác định phương pháp phù hợp với từng loại mô hình và dữ liệu. |
-| **Hạn chế** | Có giới hạn về mô hình, giả định nhãn đến ngay và thiết lập thực nghiệm. | Chi phí tính toán của phép đo và giả định về chi phí retraining. | Cần kiểm chứng trong pipeline và bộ dữ liệu của dự án. |
+These gaps represent research directions derived from the literature; they do not imply that prior studies have entirely failed to address these issues.
 
-### Nhận định tổng kết từ các nghiên cứu:
-- **Phát hiện Concept Drift không đồng nghĩa với việc phải retraining ngay lập tức:** Một thay đổi trong dữ liệu chỉ nên dẫn đến cập nhật khi có bằng chứng cho thấy việc cập nhật mang lại lợi ích phù hợp.
-- **Đánh giá đa chiều:** Chính sách retraining cần được đánh giá đồng thời theo hiệu suất dự đoán, số lần cập nhật, thời gian huấn luyện và tài nguyên sử dụng.
-- **Tính chất dữ liệu và mô hình:** Đặc điểm của dữ liệu và mô hình có ảnh hưởng lớn đến hiệu quả của phương pháp cập nhật.
-- **Thứ tự thời gian:** Với dữ liệu chuỗi thời gian, việc chia tập và đánh giá phải bảo toàn thứ tự thời gian.
-- **Độ trễ nhãn:** Độ trễ nhãn có thể ảnh hưởng đến thời điểm phát hiện suy giảm hiệu suất và khả năng đánh giá mô hình.
+## 7. Proposed Research Direction
 
----
+Based on the theoretical background and reviewed studies, this project proposes evaluating adaptive update methods within automated data pipelines.
 
-## 6. Khoảng trống nghiên cứu
+| Research Branch | Data / Task | Models and Methods Awaiting Confirmation | Proposed Research Direction |
+| --- | --- | --- | --- |
+| ELEC2 | Stream classification | GaussianNB, Hoeffding Tree; ADWIN/DDM; Prequential Evaluation | Evaluate drift-detection ability and model-performance maintenance as data changes. |
+| Beijing | One-hour-ahead PM2.5 forecasting | Persistence, LightGBM, Random Forest | Compare forecasting models and assess performance maintenance over time. |
+| Vietnam | Air-quality forecasting | Persistence, LightGBM, River Linear Regression | Study model updating on real-world data over time. |
 
-Từ việc tổng hợp các nghiên cứu, có thể xác định một số vấn đề cần tiếp tục xem xét trong phạm vi đề tài:
-1. **Thiếu đánh giá đồng thời hiệu suất và chi phí:** Nhiều phương pháp tập trung vào khả năng phát hiện drift hoặc cải thiện độ chính xác, trong khi chi phí retraining và độ trễ triển khai cũng ảnh hưởng trực tiếp đến hiệu quả hệ thống.
-2. **Phụ thuộc vào đặc điểm dữ liệu:** Một chính sách có thể hoạt động tốt với dạng drift này nhưng không hiệu quả với dạng drift khác. Vì vậy, cần đánh giá theo từng bộ dữ liệu và nhiệm vụ.
-3. **Vấn đề nhãn đến trễ:** Trong môi trường thực tế, nhãn có thể không xuất hiện ngay sau khi dự đoán, làm ảnh hưởng đến việc giám sát hiệu suất và ra quyết định cập nhật.
-4. **Khác biệt giữa phát hiện drift và quyết định retraining:** Phát hiện sự thay đổi không đồng nghĩa với việc mô hình đã suy giảm đến mức cần huấn luyện lại.
-5. **Khả năng tích hợp vào pipeline tự động:** Quyết định cập nhật cần được kết nối với quá trình tiếp nhận dữ liệu, đánh giá mô hình, quản lý phiên bản và triển khai.
+The models and methods listed in the table are subject to confirmation by the AI Team before approval and should not be considered a finalized approved list.
 
-*(Các khoảng trống trên là định hướng nghiên cứu được rút ra từ tài liệu, không phải khẳng định rằng các nghiên cứu trước hoàn toàn chưa giải quyết những vấn đề này).*
+The overall direction includes:
 
----
+- Monitor changes in data and model performance.
+- Compare update policies such as Periodic Retraining, Error-threshold Retraining, Drift-triggered Retraining, and No-retrain.
+- Consider Incremental Learning when supported by the model and deployment interface.
+- Evaluate the effects of retraining cost, latency, and label availability timing.
+- Develop a process for evaluating a new model before replacing the current model.
 
-## 7. Định hướng nghiên cứu đề xuất
+## 8. Preliminary Experimental Design
 
-Dựa trên cơ sở lý thuyết và các nghiên cứu đã tổng hợp, đề tài đề xuất tập trung vào việc đánh giá các phương pháp cập nhật thích ứng trong quy trình dữ liệu tự động.
+The design below is an initial proposal to guide experimentation. Parameters, thresholds, input data, and deployment criteria must be agreed upon with the Data Pipeline, AI, and MLOps teams before implementation.
 
-| Nhánh nghiên cứu | Dữ liệu / Nhiệm vụ | Mô hình và phương pháp đang được yêu cầu xác nhận | Hướng nghiên cứu đề xuất |
-| :--- | :--- | :--- | :--- |
-| **ELEC2** | Phân loại trên dữ liệu luồng | GaussianNB, Hoeffding Tree; ADWIN/DDM; Prequential Evaluation | Đánh giá khả năng phát hiện drift và duy trì hiệu suất mô hình khi dữ liệu thay đổi. |
-| **Beijing** | Dự báo PM2.5 trước 1 giờ | Persistence, LightGBM, Random Forest | So sánh các mô hình dự báo và đánh giá khả năng duy trì hiệu suất theo thời gian. |
-| **Vietnam** | Dự báo chất lượng không khí | Persistence, LightGBM, River Linear Regression | Nghiên cứu khả năng cập nhật mô hình trên dữ liệu thực tế theo thời gian. |
+### 8.1. Experimental Objectives
 
-*(Các mô hình và phương pháp trong bảng là nội dung AI Team yêu cầu xác nhận trước khi phê duyệt, chưa được xem là danh sách đã được phê duyệt cuối cùng).*
+- Evaluate the ability to maintain model performance as data changes.
+- Compare the effectiveness of different update policies.
+- Measure the trade-off between predictive performance and retraining cost.
+- Evaluate the integration of update policies into an automated pipeline.
 
-### Định hướng tổng thể:
-- Theo dõi sự thay đổi của dữ liệu và hiệu suất mô hình.
-- So sánh các chính sách cập nhật như Periodic Retraining, Error-threshold Retraining, Drift-triggered Retraining và No-retrain.
-- Xem xét khả năng sử dụng Incremental Learning khi mô hình và giao diện triển khai hỗ trợ.
-- Đánh giá tác động của chi phí retraining, độ trễ và thời điểm nhãn đến.
-- Xây dựng quy trình đánh giá mô hình mới trước khi thay thế mô hình hiện tại.
+### 8.2. Methods for Comparison
 
----
+| Method | Mechanism | Purpose |
+| --- | --- | --- |
+| No-retrain | Keep the model unchanged without retraining during the experiment. | Baseline for assessing degradation without updates. |
+| Periodic Retraining | Retrain at predefined intervals. | Evaluate periodic updating. |
+| Error-threshold Retraining | Trigger retraining when an error metric exceeds a threshold. | Evaluate a policy based on performance degradation. |
+| Drift-triggered Retraining | Trigger retraining when a drift detector issues an alert. | Evaluate a policy based on drift-detection signals. |
+| Incremental Learning (if supported) | Update the model incrementally when new data and corresponding labels are available. | Evaluate adaptation without frequent full retraining. |
 
-## 8. Thiết kế thực nghiệm sơ bộ
+### 8.3. Proposed Experimental Workflow
 
-*(Thiết kế dưới đây là đề xuất ban đầu để định hướng thực nghiệm. Các tham số, ngưỡng, dữ liệu đầu vào và tiêu chí triển khai cần được thống nhất với Data Pipeline, AI và MLOps trước khi thực hiện).*
+1. Receive data from the Data Pipeline in chronological order.
+2. Check the data, data types, features, target, and potential data leakage.
+3. Train the initial model using the training dataset.
+4. Feed new data into the system and generate predictions.
+5. Monitor performance or drift signals using the selected method.
+6. Trigger the corresponding update policy when its conditions are met.
+7. Train or update the model using appropriate data.
+8. Evaluate the new model before replacing the currently deployed model.
+9. Record results, processing time, and model version information.
 
-### 8.1. Mục tiêu thực nghiệm
-- Đánh giá khả năng duy trì hiệu suất của mô hình khi dữ liệu thay đổi.
-- So sánh hiệu quả giữa các chính sách cập nhật.
-- Đo lường sự đánh đổi giữa hiệu suất dự đoán và chi phí retraining.
-- Đánh giá khả năng tích hợp chính sách cập nhật vào pipeline tự động.
+### 8.4. Evaluation Metrics
 
-### 8.2. Các phương pháp so sánh
-| Phương pháp | Cơ chế | Mục đích |
-| :--- | :--- | :--- |
-| **No-retrain** | Giữ nguyên mô hình, không huấn luyện lại trong quá trình thử nghiệm. | Baseline để đánh giá mức suy giảm nếu không cập nhật. |
-| **Periodic Retraining** | Huấn luyện lại theo chu kỳ xác định. | Đánh giá chính sách cập nhật định kỳ. |
-| **Error-threshold Retraining** | Kích hoạt retraining khi chỉ số lỗi vượt ngưỡng. | Đánh giá chính sách dựa trên suy giảm hiệu suất. |
-| **Drift-triggered Retraining** | Kích hoạt retraining khi bộ phát hiện drift đưa ra cảnh báo. | Đánh giá chính sách dựa trên tín hiệu phát hiện drift. |
-| **Incremental Learning (nếu hỗ trợ)** | Cập nhật mô hình từng phần khi dữ liệu mới và nhãn tương ứng sẵn sàng. | Đánh giá khả năng thích ứng mà không cần retraining toàn phần thường xuyên. |
+| Evaluation Group | Proposed Metrics | Meaning |
+| --- | --- | --- |
+| Classification Performance (ELEC2) | Accuracy, F1-score | Assess prediction quality for stream classification. |
+| Regression Performance (PM2.5) | MAE, RMSE (µg/m³) | Assess one-hour-ahead PM2.5 forecasting error. |
+| Drift Detection | Detection Delay; False Alarm Rate; number of alerts | Assess detection timing and false alarms; distinguish feature drift from error-based drift. |
+| Update Cost | Retraining Count; model_retrain_duration_seconds (CPU seconds) | Measure retraining count and required CPU time per training run. |
+| System Resources | time.process_time(); process_cpu_seconds_total; process_resident_memory_bytes | Monitor resources; retraining CPU time is measured using time.process_time(). |
+| Prediction Latency | model_prediction_duration_seconds; latency (ms) | Measure wall-clock latency for /predict requests; the operational target is no more than 500 ms. |
+| Deployment | Model Version; Candidate/Champion; rollback status | Track versions, promotion outcomes, and rollback to the champion. |
 
-### 8.3. Quy trình thực nghiệm dự kiến
-1. Tiếp nhận dữ liệu theo thứ tự thời gian từ Data Pipeline.
-2. Kiểm tra dữ liệu, kiểu dữ liệu, feature, target và nguy cơ data leakage.
-3. Huấn luyện mô hình ban đầu trên tập dữ liệu huấn luyện.
-4. Đưa dữ liệu mới vào hệ thống và thực hiện dự đoán.
-5. Theo dõi hiệu suất hoặc tín hiệu drift theo phương pháp đã lựa chọn.
-6. Kích hoạt chính sách cập nhật tương ứng khi thỏa mãn điều kiện.
-7. Huấn luyện hoặc cập nhật mô hình bằng dữ liệu phù hợp.
-8. Đánh giá mô hình mới trước khi thay thế mô hình đang sử dụng.
-9. Ghi nhận kết quả, thời gian xử lý và thông tin phiên bản mô hình.
+### 8.5. Evaluation and Comparison Methods
 
-### 8.4. Chỉ số đánh giá
-| Nhóm đánh giá | Chỉ số đề xuất | Ý nghĩa |
-| :--- | :--- | :--- |
-| **Hiệu suất phân loại** | Accuracy, F1-score | Đánh giá chất lượng dự đoán trên ELEC2. |
-| **Hiệu suất hồi quy** | MAE, RMSE | Đánh giá sai số dự báo PM2.5. |
-| **Phát hiện drift** | Detection Delay, số lần cảnh báo | Đánh giá khả năng phát hiện và thời điểm phát hiện thay đổi. |
-| **Chi phí cập nhật** | Retraining Count, Retraining Duration | Đánh giá tần suất và thời gian huấn luyện lại. |
-| **Tài nguyên hệ thống** | CPU Usage, thời gian xử lý | Đánh giá chi phí vận hành nếu hệ thống có thể thu thập. |
-| **Triển khai** | Deployment Latency, Model Version | Theo dõi độ trễ triển khai và lịch sử phiên bản mô hình. |
+- Use Prequential Evaluation for streaming classification tasks where appropriate.
+- For PM2.5 forecasting, prioritize chronological data splitting and evaluation on future periods; rolling evaluation or repeated holdout may be used.
+- Ensure that all policies are compared under the same data conditions and experimental setup.
+- Statistical tests appropriate to the comparison design may be used; Wilcoxon or Friedman tests are possible options depending on the number of methods and datasets.
+- Report both the magnitude of differences and statistical results, rather than relying only on Accuracy or RMSE.
 
-### 8.5. Phương pháp đánh giá và so sánh
-- Sử dụng Prequential Evaluation cho nhiệm vụ phân loại dữ liệu luồng khi phù hợp.
-- Với dự báo PM2.5, ưu tiên chia dữ liệu theo thời gian và đánh giá trên các giai đoạn tương lai; có thể sử dụng đánh giá rolling hoặc repeated holdout.
-- Đảm bảo các chính sách được so sánh trên cùng điều kiện dữ liệu và cùng cách thiết lập thực nghiệm.
-- Có thể sử dụng kiểm định thống kê phù hợp với thiết kế so sánh; Wilcoxon hoặc Friedman là các hướng tham khảo tùy số lượng phương pháp và bộ dữ liệu.
-- Báo cáo cả độ lớn khác biệt và kết quả thống kê, không chỉ dựa vào một chỉ số Accuracy hoặc RMSE.
+#### 8.5.1. Quantitative Experimental Design Matrix
 
-### 8.6. Các nội dung cần xác nhận liên nhóm
-| Nội dung | Team liên quan | Vấn đề cần thống nhất |
-| :--- | :--- | :--- |
-| **Feature Contract** | Data Pipeline + AI | Feature, target, kiểu dữ liệu và quy tắc chống leakage theo từng dataset. |
-| **Model Interface** | AI + MLOps | Đầu vào huấn luyện, đầu ra dự đoán và cách quản lý phiên bản mô hình. |
-| **Evaluation** | AI | Accuracy/F1 cho phân loại; MAE/RMSE cho hồi quy và cách đánh giá theo thời gian. |
-| **Drift Event** | AI + MLOps | Event schema, detector identifier và ý nghĩa timestamp. |
-| **Retraining** | AI + MLOps | Điều kiện kích hoạt, số lượng dữ liệu tối thiểu và tiêu chí chấp nhận mô hình mới. |
-| **Data Stream** | Data Pipeline + AI | Thứ tự thời gian, dữ liệu đến trễ và thời điểm nhãn có sẵn. |
+The matrix below is the proposed configuration for the PM2.5 forecasting branch. Each policy × label-delay × dataset combination is run with 5 random seeds (11, 22, 33, 42, 55). Seed 42 is the default seed specified in CONTRACTS.md; the remaining seeds are used to assess stability. Sudden, gradual, and recurring drift are evaluated separately when drift periods are identified or controlled and generated.
 
----
+The PM2.5 policies include: (1) No-retrain/static model; (2) Weekly retraining every 7 days; (3) ADWIN-triggered retraining; and (4) Hybrid weekly + ADWIN-triggered, with a cooldown of at most once every 24 hours. DDM is a labeled-error-based detector and is therefore evaluated separately in the ELEC2 classification branch or in an appropriate labeled setting; it is not treated as an unsupervised detector for PM2.5.
 
-## 9. Kết luận (Conclusion)
+Label delays of 0, 24, and 72 hours are research stress tests. CONTRACTS.md specifies 1 hour as the operational reference delay for the PM2.5 pipeline; an additional test at 1 hour should therefore be included for Contract alignment. When labels are not yet available, supervised errors must not be calculated and those labels must not be used to update the model.
 
-Các nghiên cứu được tổng hợp cho thấy cập nhật thích ứng mô hình học máy là một vấn đề có nhiều yếu tố liên quan, không chỉ giới hạn ở việc phát hiện Concept Drift. Việc lựa chọn thời điểm và phương pháp retraining cần cân nhắc hiệu suất dự đoán, chi phí tính toán, độ trễ, đặc điểm dữ liệu và khả năng cập nhật của mô hình.
+The PM2.5 datasets include Beijing Multi-Site Air Quality and Vietnam PM2.5 from Hanoi and Ho Chi Minh City. ELEC2 remains a separate streaming-classification experimental branch for evaluating label-based drift and is not combined with PM2.5 regression metrics.
 
-Hai nghiên cứu chính cung cấp hai góc nhìn bổ sung:
-- Nghiên cứu của **Dasari** tập trung so sánh các chính sách retraining trong điều kiện ngân sách và độ trễ.
-- Nghiên cứu **CARA** tập trung cân bằng chi phí mô hình lỗi thời với chi phí retraining.
+#### 8.5.2. Statistical Testing
 
-Các nghiên cứu bổ trợ cung cấp cơ sở cho đánh giá dữ liệu luồng, xử lý nhãn đến trễ, phát hiện drift và kiểm định kết quả thực nghiệm.
+Policies are compared pairwise using the same dataset, drift scenario, label delay, and seed. For two policies, use a paired t-test when the distribution of differences meets the assumptions; otherwise, use the Wilcoxon signed-rank test. When comparing three or more policies across multiple conditions, use the Friedman test; if an overall difference is found, conduct pairwise post-hoc Wilcoxon tests with Holm–Bonferroni correction. Report p-values, effect sizes (paired Cohen’s d or rank-biserial correlation), and confidence intervals where available. Autocorrelated timestamps should not be treated as independent observations.
 
-Trên cơ sở đó, đề tài định hướng nghiên cứu và so sánh các phương pháp cập nhật thích ứng trong ba nhánh dữ liệu **ELEC2**, **Beijing** và **Vietnam**. Mục tiêu là tìm hiểu cách duy trì hiệu suất mô hình trong môi trường dữ liệu thay đổi, đồng thời đảm bảo quá trình cập nhật có thể được đánh giá và tích hợp vào quy trình dữ liệu tự động.
+#### 8.5.3. Mandatory CPU-Time Measurement and Training Cost
 
----
+According to Section 5.1 of CONTRACTS.md, model_retrain_duration_seconds is a mandatory metric and must be measured using CPU process time via time.process_time(). Record CPU time separately for initial training and each retraining event, and store cumulative CPU seconds for each policy and run. Example: cpu_start = time.process_time(); train_model(...); cpu_elapsed = time.process_time() - cpu_start. This value represents process CPU time, not elapsed wall-clock time.
 
-## 10. Tài liệu tham khảo
+CPU retraining time must be distinguished from wall-clock retraining duration and prediction latency. model_prediction_duration_seconds measures the actual time taken to process a /predict request; the Contract target latency is ≤500 ms. Where possible, report both CPU time and wall-clock time.
 
-1. **Dasari, S. (2026).** *When to Retrain: An Empirical Study of Retraining Policies for Streaming ML Under Concept Drift, Budget, and Latency Constraints.* arXiv:2608.19488.
-2. **Mahadevan, A., & Mathioudakis, M. (2024).** *Cost-aware retraining for machine learning.* Knowledge-Based Systems, 293, 111610. https://doi.org/10.1016/j.knosys.2024.111610
-3. **Bayram, F., Ahmed, B. S., & Kassler, A. (2022).** *From concept drift to model degradation: An overview on performance-aware drift detectors.* Knowledge-Based Systems, 245, 108632.
-4. **Cerqueira, V., Torgo, L., & Mozetič, I. (2020).** *Evaluating time series forecasting models: An empirical study on performance estimation methods.* Machine Learning, 109, 1997–2028. https://doi.org/10.1007/s10994-020-05910-7
-5. **Demšar, J. (2006).** *Statistical comparisons of classifiers over multiple data sets.* Journal of Machine Learning Research, 7, 1–30.
-6. **Grzenda et al. (2020).** *Nghiên cứu về đánh giá mô hình trên luồng dữ liệu có nhãn đến trễ.*
-7. **Souza et al. (2020).** *Nghiên cứu về benchmark và dữ liệu luồng.*
+| Factor | Experimental Value |
+| --- | --- |
+| Policies | No-retrain; Weekly (7 days); ADWIN-triggered; Hybrid (Weekly + ADWIN) |
+| Label Delay | 0, 24, and 72 hours (stress tests); add 1 hour for Contract alignment |
+| PM2.5 Datasets | Beijing; Vietnam-Hanoi; Vietnam-Ho Chi Minh City |
+| Number of Seeds | 5: 11, 22, 33, 42, 55 |
+| Drift Scenario | Sudden; Gradual; Recurring (evaluated separately where suitable data/setup is available) |
+| Experiment Runs | 4 policies × 3 label delays × 3 datasets × 5 seeds = 180 runs per scenario; across 3 scenarios (Sudden, Gradual, Recurring), the theoretical total is 540 runs. With the additional 1-hour delay (4 delay levels), this becomes 240 runs per scenario, or 720 runs in total. These are theoretical runs based on the proposed matrix, not experiments already conducted. |
+
+### 8.6. Items Requiring Cross-Team Confirmation
+
+| Item | Relevant Team | Items to Agree Upon |
+| --- | --- | --- |
+| Feature Contract | Data Pipeline + AI | Features, target, data types, and leakage-prevention rules for each dataset. |
+| Model Interface | AI + MLOps | Training inputs, prediction outputs, and model-version management. |
+| Evaluation | AI | Accuracy/F1 for classification; MAE/RMSE for regression; and time-based evaluation. |
+| Drift Event | AI + MLOps | Event schema, detector identifier, and timestamp semantics. |
+| Retraining | AI + MLOps | Trigger conditions, minimum data volume, and acceptance criteria for a new model. |
+| Data Stream | Data Pipeline + AI | Chronological ordering, delayed data, and label availability timing. |
+
+### 8.7. Mapping the Research Design to the Data/AI/MLOps Contract
+
+For PM2.5, the task is one-hour-ahead forecasting (target_time = event_time + 1 hour), with LightGBM Regressor as the primary model and Persistence as the mandatory baseline. Moving Average and static LightGBM may be included as additional comparators if agreed upon by the team. The primary regression metrics are MAE and RMSE. The MLOps mock RandomForestClassifier on Breast Cancer is not the PM2.5 research model.
+
+Input features must be consistently mapped between the standard pm25_hourly_features schema (e.g., pm25_lag_1h, pm25_lag_3h, pm25_lag_24h, rolling means, weekday, weather) and the aliases used in notebooks (e.g., pm25_lag1, dayofweek). Leakage must be prevented: weather features may only be used if they were available at prediction time; future observed weather must not be treated as if it were already available.
+
+At the schema-adapter layer, retain valid missing values and do not arbitrarily impute or delete records; serving-time imputation is a separate step governed by the Model Interface Contract. Extreme but valid PM2.5 values must be retained for drift research. For forecasts with delayed labels, errors should only be calculated and models updated after the actual label becomes available.
+
+The initial candidate must achieve a lower MAE than Persistence on the same test set. Compared with the champion, the candidate must improve MAE by at least 2%, have an RMSE no more than 1% higher than the champion, and meet latency ≤500 ms. Otherwise, retain the current champion; rollback is supported through the champion alias.
+
+## 9. Conclusion
+
+The reviewed studies show that adaptive machine learning model updating involves multiple factors and is not limited to Concept Drift detection. The choice of when and how to retrain must consider predictive performance, computational cost, latency, data characteristics, and the model’s update capabilities.
+
+The two main studies provide complementary perspectives: Dasari’s study compares retraining policies under budget and latency constraints, while CARA focuses on balancing the cost of model obsolescence against retraining costs. The supporting studies provide a basis for stream-data evaluation, delayed-label handling, drift detection, and experimental-result testing.
+
+Accordingly, this project aims to investigate and compare adaptive update methods across three data branches: ELEC2, Beijing, and Vietnam. The objective is to explore how model performance can be maintained in changing data environments while ensuring that the update process can be evaluated and integrated into automated data pipelines.
+
+## 10. References
+
+Dasari, S. (2026). When to Retrain: An Empirical Study of Retraining Policies for Streaming ML Under Concept Drift, Budget, and Latency Constraints. arXiv:2608.19488.
+
+Mahadevan, A., & Mathioudakis, M. (2024). Cost-aware retraining for machine learning. Knowledge-Based Systems, 293, 111610. https://doi.org/10.1016/j.knosys.2024.111610
+
+Bayram, F., Ahmed, B. S., & Kassler, A. (2022). From concept drift to model degradation: An overview on performance-aware drift detectors. Knowledge-Based Systems, 245, 108632.
+
+Cerqueira, V., Torgo, L., & Mozetič, I. (2020). Evaluating time series forecasting models: An empirical study on performance estimation methods. Machine Learning, 109, 1997–2028. https://doi.org/10.1007/s10994-020-05910-7
+
+Demšar, J. (2006). Statistical comparisons of classifiers over multiple data sets. Journal of Machine Learning Research, 7, 1–30.
+
+Grzenda et al. (2020). Study on evaluating models on data streams with delayed labels.
+
+Souza et al. (2020). Study on benchmarking and stream data.
