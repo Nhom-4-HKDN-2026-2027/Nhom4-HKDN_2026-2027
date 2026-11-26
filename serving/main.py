@@ -16,7 +16,7 @@ load_dotenv(ENV_PATH)
 
 # Configuration
 MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
-MODEL_NAME = os.getenv("MODEL_NAME", "pm25-forecasting")
+MODEL_NAME = os.getenv("MODEL_NAME", "pm25_forecasting")
 MODEL_ALIAS = os.getenv("MODEL_ALIAS", "champion")
 MODEL_URI = os.getenv("MODEL_URI")
 

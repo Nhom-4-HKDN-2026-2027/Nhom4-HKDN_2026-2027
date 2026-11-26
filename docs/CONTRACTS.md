@@ -97,10 +97,10 @@
 | Item                         | Agreed Approach                                                                                                                                                                                                                                                                                                             |
 | :--------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Problem type**       | PM2.5 Forecasting                                                                                                                                                                                                                                                                                                           |
-| **Model algorithm**    | - Primary experiment: LightGBM Regressor (`LGBMRegressor`)- Baseline for comparison: Persistence model (uses the current PM2.5 value as the forecast for the future)- Current MLOps mock component: `RandomForestClassifier` trained on the Breast Cancer dataset                                                       |
+| **Model algorithm**    | - Primary experiment: LightGBM Regressor (`LGBMRegressor`)- Baseline for comparison: Persistence model (uses the current PM2.5 value as the forecast for the future)                                                    |
 | **Framework**          | LightGBM / Scikit-Learn                                                                                                                                                                                                                                                                                                     |
 | **Language / version** | Python 3.11                                                                                                                                                                                                                                                                                                                 |
-| **Input features**     | Current baseline notebook experiments use: `pm25_ug_m3`, `hour`, `dayofweek`, PM2.5 lags `pm25_lag1`, `pm25_lag2`, `pm25_lag3`, `pm25_lag6`, `pm25_lag12`, `pm25_lag24`, and weather lags (`temperature_c_lag1`, `relative_humidity_pct_lag1`, `wind_speed_m_s_lag1`, `wind_direction_deg_lag1`). |
+| **Input features**     | Standardized 13-feature schema (`pm25-13-v2-int64-calendar`): `station_id`, `pm25_ug_m3`, three PM2.5 lag features (`pm25_lag_1h`, `pm25_lag_3h`, `pm25_lag_24h`), three time-based features (`hour`, `weekday`, `month`), and five weather features (`temperature_c`, `relative_humidity_pct`, `wind_speed_m_s`, `wind_direction_deg`, `precipitation_mm`). |
 | **Prediction target**  | `predicted_pm25_ug_m3` (PM2.5 concentration at the forecast time)                                                                                                                                                                                                                                                         |
 | **Forecast horizon**   | 1 hour (1-hour-ahead forecast: `target_time = event_time + 1h`)                                                                                                                                                                                                                                                           |
 | **Output type**        | FLOAT (non-negative real number: `np.maximum(prediction, 0)`)                                                                                                                                                                                                                                                             |
@@ -139,9 +139,9 @@
 
 | Item                               | Agreed Approach                                                                                                                                                                                                                                                                                                                                                                                   |
 | :--------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Input schema**             | `station_id` (STRING), `timestamp` (STRING/ISO-8601), `pm25_ug_m3` (FLOAT), `pm25_lag_1h` (FLOAT), plus optional weather/time features (e.g., `temperature` (FLOAT), `humidity` (FLOAT), `wind_speed` (FLOAT)). The API must not restrict requests to a hardcoded list of 12 station IDs.                                                                                           |
+| **Input schema**             | `station_id` (STRING), `pm25_ug_m3` (FLOAT), `pm25_lag_1h` (FLOAT), `pm25_lag_3h` (FLOAT), `pm25_lag_24h` (FLOAT), `hour` (INT), `weekday` (INT), `month` (INT), (`temperature_c`, `relative_humidity_pct`, `wind_speed_m_s`, `wind_direction_deg`, `precipitation_mm`).                                                                             |
 | **Input format**             | JSON / DataFrame                                                                                                                                                                                                                                                                                                                                                                                  |
-| **Output schema**            | `station_id` (STRING), `target_time` (TIMESTAMP), `predicted_pm25_ug_m3` (FLOAT), `model_version` (STRING) *(as proposed in `docs/CONTRACTS.md`)*                                                                                                                                                                                                                                     |
+| **Output schema**            | `request_id` (STRING), `status` (STRING), `model_name` (STRING), `model_alias` (STRING), và `predictions`*                                                                                                                                                                                                                                     |
 | **Output format**            | JSON                                                                                                                                                                                                                                                                                                                                                                                              |
 | **Batch prediction**         | Supported                                                                                                                                                                                                                                                                                                                                                                                         |
 | **Missing feature handling** | Impute missing `pm25` lags using forward-fill / last known station value (or rolling mean); impute missing weather features using recent station median; reject request with HTTP 422/400 if core identifiers (`station_id`, `timestamp`) or all required features are missing. AI is responsible for encoding `station_id` in the model preprocessing pipeline before logging the model. |
@@ -149,13 +149,36 @@
 **Example input:**
 
 ```json
-{"pm25_ug_m3": 35.2, "pm25_lag_1h": 32.1}
+{
+  "features": [
+    {
+      "station_id": "beijing_Aotizhongxin",
+      "pm25_ug_m3": 193.0,
+      "pm25_lag_1h": 150.0,
+      "pm25_lag_3h": 98.0,
+      "pm25_lag_24h": 22.0,
+      "hour": 23,
+      "weekday": 3,
+      "month": 12,
+      "temperature_c": -3.4,
+      "relative_humidity_pct": 73.26,
+      "wind_speed_m_s": 1.8,
+      "wind_direction_deg": 45.0,
+      "precipitation_mm": 0.0
+    }
+  ]
+}
 ```
-
 **Example output:**
 
 ```json
-{"prediction": 36.5}
+{
+  "request_id": "c1f8d4e2-8b09-4df8-7e41-28e441b209a1",
+  "status": "success",
+  "model_name": "pm25_forecasting",
+  "model_alias": "champion",
+  "predictions": [185.4]
+}
 ```
 
 #### 2.4. Model Artifact
@@ -167,7 +190,7 @@
 | **Model serialization** | MLflow flavors (cloudpickle / joblib through `mlflow.sklearn` or `mlflow.lightgbm`)                                                                   |
 | **Model signature**     | Mandatory (inferred using `mlflow.models.infer_signature`)                                                                                              |
 | **Dependencies**        | `requirements.txt` / `conda.yaml` generated automatically by MLflow, and the project lockfile `requirements-py311.lock`                             |
-| **Required metadata**   | `model_name`, `model_version`, `training_timestamp`, `dataset_version`, `model_strategy`, `feature_schema_version`, `mae`, `rmse`, `r2` |
+| **Required metadata**   | `model_name`, `model_version`, `training_timestamp`, `dataset_version`, `model_strategy`, `feature_schema_version`, `mae`, `rmse`, `persistence_mae`, `persistence_rmse` |
 
 #### 2.5. Model Evaluation & Acceptance
 
@@ -206,8 +229,8 @@
 | **MLflow Tracking URI**   | `http://mlflow:5000` (inside Docker) or `http://localhost:5000` (host)                                        |
 | **Backend Store**         | PostgreSQL (`postgresql+psycopg2://mlflow:mlflow123@postgres:5432/mlflow`)                                      |
 | **Artifact Store**        | MinIO (`s3://models/` with endpoint `http://minio:9000`)                                                      |
-| **Experiment name**       | `pm25_forecasting` *(proposed in `docs/CONTRACTS.md`; current mock code uses `adaptive-model-updating`)*  |
-| **Registered model name** | `pm25-forecasting` *(proposed in `docs/CONTRACTS.md`; current mock code uses `BreastCancerRandomForest`)* |
+| **Experiment name**       | `pm25_forecasting`   |
+| **Registered model name** | `pm25_forecasting`  |
 | **Model versioning**      | MLflow version number (auto-incremented: 1, 2, 3, ...)                                                            |
 | **Model artifact format** | MLflow Model                                                                                                      |
 | **Model signature**       | Mandatory                                                                                                         |
@@ -217,7 +240,7 @@
 | Object                     | Naming convention          | Example                                           |
 | :------------------------- | :------------------------- | :------------------------------------------------ |
 | **Experiment**       | snake_case                 | `pm25_forecasting`                              |
-| **Registered model** | kebab-case                 | `pm25-forecasting`                              |
+| **Registered model** | kebab-case                 | `pm25_forecasting`                              |
 | **Model version**    | Auto-incrementing integer  | `1`, `2`                                      |
 | **Run name**         | `<model_type>-<purpose>` | `lightgbm-baseline`, `random-forest-baseline` |
 | **Artifact**         | MLflow Model standard      | `model/model.pkl`, `MLmodel`                  |
@@ -267,7 +290,7 @@
 
 | Field          | Data type      | Required | Description                                                                             |
 | :------------- | :------------- | :------- | :-------------------------------------------------------------------------------------- |
-| `model_name` | STRING         | No       | Name of the model (defaults to `MODEL_NAME` from environment: `pm25-forecasting`)   |
+| `model_name` | STRING         | No       | Name of the model (defaults to `MODEL_NAME` from environment: `pm25_forecasting`)   |
 | `features`   | OBJECT / ARRAY | Yes      | Array of observation feature samples (each sample contains 13 PM2.5 & weather features) |
 | `timestamp`  | STRING         | No       | Request submission timestamp (optional)                                                 |
 
@@ -277,7 +300,7 @@
 | :-------------- | :---------- | :---------------------------------------------------------------------------------- |
 | `request_id`  | STRING      | Unique request identifier (UUID) generated for distributed tracing and log auditing |
 | `status`      | STRING      | Processing status of the prediction request (`"success"`)                         |
-| `model_name`  | STRING      | Name of the registered model serving predictions (`"pm25-forecasting"`)           |
+| `model_name`  | STRING      | Name of the registered model serving predictions (`"pm25_forecasting"`)           |
 | `model_alias` | STRING      | Active model registry alias deployed in serving (`"champion"`)                    |
 | `predictions` | LIST[FLOAT] | List of forecasted PM2.5 concentrations in µg/m³ (non-negative floats)            |
 
@@ -287,7 +310,7 @@
 {
   "request_id": "c1f8d4e2-8b09-4df8-7e41-28e441b209a1",
   "status": "success",
-  "model_name": "pm25-forecasting",
+  "model_name": "pm25_forecasting",
   "model_alias": "champion",
   "predictions": [38.5]
 }
@@ -298,7 +321,7 @@
 | HTTP status   | Scenario                              | Handling                                                                                                                               |
 | :------------ | :------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------- |
 | **400** | Invalid input                         | Return `{"detail": "Features array is empty or invalid format"}`                                                                     |
-| **404** | Model not found                       | Return `{"detail": "Model pm25-forecasting@champion not found in registry"}`                                                         |
+| **404** | Model not found                       | Return `{"detail": "Model pm25_forecasting@champion not found in registry"}`                                                         |
 | **422** | Invalid schema / Unprocessable Entity | Return detailed schema-validation errors from FastAPI/Pydantic (or when the feature dimensionality does not match the expected input). |
 | **500** | Internal error                        | Catch the exception, log the system error, and return `{"detail": str(exc)}`.                                                        |
 | **503** | Model unavailable                     | Return `{"detail": "Model is not loaded"}` when the model has not been initialized successfully.                                     |
@@ -344,7 +367,7 @@
 
 | Label             | Data type | Description                                                                  |
 | :---------------- | :-------- | :--------------------------------------------------------------------------- |
-| `model_name`    | STRING    | Model identifier (e.g. `pm25-forecasting`)                                 |
+| `model_name`    | STRING    | Model identifier (e.g. `pm25_forecasting`)                                 |
 | `model_version` | STRING    | Active model version string (e.g. `1`, `2`)                              |
 | `environment`   | STRING    | Deployment environment (`demo`, `staging`, `production`)               |
 | `station_id`    | STRING    | Monitoring station identifier (e.g. `tiantan`, `wanliu`, `us_embassy`) |
