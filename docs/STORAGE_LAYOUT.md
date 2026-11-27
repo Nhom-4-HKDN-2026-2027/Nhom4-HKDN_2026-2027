@@ -140,7 +140,7 @@ formal timezone. `--source-timezone` can override this assumption. UTC coverage
 is February 28, 2013 16:00 through February 28, 2017 15:00. Partition years are
 computed from UTC, so local January 1 early hours can belong to the preceding year.
 
-Beijing's logical schema follows CONTRACTS.md §3.2:
+Beijing's logical schema follows CONTRACTS.md §1.2 (base observation schema):
 
 | Column | Type / derivation |
 |---|---|
@@ -151,6 +151,7 @@ Beijing's logical schema follows CONTRACTS.md §3.2:
 | relative_humidity_pct | float64, derived from TEMP and DEWP |
 | wind_speed_m_s | float64, source WSPM |
 | wind_direction_deg | float64, 16-point compass mapping; N=0, clockwise |
+| precipitation_mm | float64, source RAIN |
 
 Relative humidity uses the Magnus approximation over liquid water:
 `100*exp(17.625*Td/(243.04+Td) - 17.625*T/(243.04+T))` (Celsius).
@@ -187,7 +188,7 @@ needed (`glob("year=2015/station_id=*/data.parquet")`).
 Use a Parquet glob or manifest-listed paths rather than passing the dataset
 root containing `manifest.json` to a Parquet-only reader. Hive readers may add
 a virtual `year` column; passing `columns=BEIJING_COLUMNS` selects the exact
-seven contract columns when passing to AI.
+eight base contract columns when passing to AI.
 
 Elec2 comes from `river.datasets.Elec2`, preserving 45,312 observations:
 `sample_idx` and `day` are int64; `target` is bool; `date`, `period`, `nswprice`,
