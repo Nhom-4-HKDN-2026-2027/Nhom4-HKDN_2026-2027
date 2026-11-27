@@ -1,0 +1,170 @@
+﻿holiday_date,holiday_name,is_day_off
+2013-01-01,Tết Dương lịch,True
+2013-01-02,Tết Dương lịch,True
+2013-01-03,Tết Dương lịch,True
+2013-01-05,Ngày làm bù,False
+2013-01-06,Ngày làm bù,False
+2013-02-09,Tết Nguyên Đán,True
+2013-02-10,Tết Nguyên Đán,True
+2013-02-11,Tết Nguyên Đán,True
+2013-02-12,Tết Nguyên Đán,True
+2013-02-13,Tết Nguyên Đán,True
+2013-02-14,Tết Nguyên Đán,True
+2013-02-15,Tết Nguyên Đán,True
+2013-02-16,Ngày làm bù,False
+2013-02-17,Ngày làm bù,False
+2013-04-04,Tiết Thanh Minh,True
+2013-04-05,Tiết Thanh Minh,True
+2013-04-06,Tiết Thanh Minh,True
+2013-04-07,Ngày làm bù,False
+2013-04-27,Ngày làm bù,False
+2013-04-28,Ngày làm bù,False
+2013-04-29,Quốc tế Lao động,True
+2013-04-30,Quốc tế Lao động,True
+2013-05-01,Quốc tế Lao động,True
+2013-06-08,Ngày làm bù,False
+2013-06-09,Ngày làm bù,False
+2013-06-10,Tết Đoan Ngọ,True
+2013-06-11,Tết Đoan Ngọ,True
+2013-06-12,Tết Đoan Ngọ,True
+2013-09-19,Tết Trung Thu,True
+2013-09-20,Tết Trung Thu,True
+2013-09-21,Tết Trung Thu,True
+2013-09-22,Ngày làm bù,False
+2013-09-29,Ngày làm bù,False
+2013-10-01,Quốc khánh Trung Quốc,True
+2013-10-02,Quốc khánh Trung Quốc,True
+2013-10-03,Quốc khánh Trung Quốc,True
+2013-10-04,Quốc khánh Trung Quốc,True
+2013-10-05,Quốc khánh Trung Quốc,True
+2013-10-06,Quốc khánh Trung Quốc,True
+2013-10-07,Quốc khánh Trung Quốc,True
+2013-10-12,Ngày làm bù,False
+2014-01-01,Tết Dương lịch,True
+2014-01-26,Ngày làm bù,False
+2014-01-31,Tết Nguyên Đán,True
+2014-02-01,Tết Nguyên Đán,True
+2014-02-02,Tết Nguyên Đán,True
+2014-02-03,Tết Nguyên Đán,True
+2014-02-04,Tết Nguyên Đán,True
+2014-02-05,Tết Nguyên Đán,True
+2014-02-06,Tết Nguyên Đán,True
+2014-02-08,Ngày làm bù,False
+2014-04-05,Tiết Thanh Minh,True
+2014-04-06,Tiết Thanh Minh,True
+2014-04-07,Tiết Thanh Minh,True
+2014-05-01,Quốc tế Lao động,True
+2014-05-02,Quốc tế Lao động,True
+2014-05-03,Quốc tế Lao động,True
+2014-05-04,Ngày làm bù,False
+2014-06-02,Tết Đoan Ngọ,True
+2014-09-06,Tết Trung Thu,True
+2014-09-07,Tết Trung Thu,True
+2014-09-08,Tết Trung Thu,True
+2014-09-28,Ngày làm bù,False
+2014-10-01,Quốc khánh Trung Quốc,True
+2014-10-02,Quốc khánh Trung Quốc,True
+2014-10-03,Quốc khánh Trung Quốc,True
+2014-10-04,Quốc khánh Trung Quốc,True
+2014-10-05,Quốc khánh Trung Quốc,True
+2014-10-06,Quốc khánh Trung Quốc,True
+2014-10-07,Quốc khánh Trung Quốc,True
+2014-10-11,Ngày làm bù,False
+2015-01-01,Tết Dương lịch,True
+2015-01-02,Tết Dương lịch,True
+2015-01-03,Tết Dương lịch,True
+2015-01-04,Ngày làm bù,False
+2015-02-15,Ngày làm bù,False
+2015-02-18,Tết Nguyên Đán,True
+2015-02-19,Tết Nguyên Đán,True
+2015-02-20,Tết Nguyên Đán,True
+2015-02-21,Tết Nguyên Đán,True
+2015-02-22,Tết Nguyên Đán,True
+2015-02-23,Tết Nguyên Đán,True
+2015-02-24,Tết Nguyên Đán,True
+2015-02-28,Ngày làm bù,False
+2015-04-04,Tiết Thanh Minh,True
+2015-04-05,Tiết Thanh Minh,True
+2015-04-06,Tiết Thanh Minh,True
+2015-05-01,Quốc tế Lao động,True
+2015-05-02,Quốc tế Lao động,True
+2015-05-03,Quốc tế Lao động,True
+2015-06-20,Tết Đoan Ngọ,True
+2015-06-21,Tết Đoan Ngọ,True
+2015-06-22,Tết Đoan Ngọ,True
+2015-09-26,Tết Trung Thu,True
+2015-09-27,Tết Trung Thu,True
+2015-10-01,Quốc khánh Trung Quốc,True
+2015-10-02,Quốc khánh Trung Quốc,True
+2015-10-03,Quốc khánh Trung Quốc,True
+2015-10-04,Quốc khánh Trung Quốc,True
+2015-10-05,Quốc khánh Trung Quốc,True
+2015-10-06,Quốc khánh Trung Quốc,True
+2015-10-07,Quốc khánh Trung Quốc,True
+2015-10-10,Ngày làm bù,False
+2016-01-01,Tết Dương lịch,True
+2016-01-02,Tết Dương lịch,True
+2016-01-03,Tết Dương lịch,True
+2016-02-06,Ngày làm bù,False
+2016-02-07,Tết Nguyên Đán,True
+2016-02-08,Tết Nguyên Đán,True
+2016-02-09,Tết Nguyên Đán,True
+2016-02-10,Tết Nguyên Đán,True
+2016-02-11,Tết Nguyên Đán,True
+2016-02-12,Tết Nguyên Đán,True
+2016-02-13,Tết Nguyên Đán,True
+2016-02-14,Ngày làm bù,False
+2016-04-02,Tiết Thanh Minh,True
+2016-04-03,Tiết Thanh Minh,True
+2016-04-04,Tiết Thanh Minh,True
+2016-04-30,Quốc tế Lao động,True
+2016-05-01,Quốc tế Lao động,True
+2016-05-02,Quốc tế Lao động,True
+2016-06-09,Tết Đoan Ngọ,True
+2016-06-10,Tết Đoan Ngọ,True
+2016-06-11,Tết Đoan Ngọ,True
+2016-06-12,Ngày làm bù,False
+2016-09-15,Tết Trung Thu,True
+2016-09-16,Tết Trung Thu,True
+2016-09-17,Tết Trung Thu,True
+2016-09-18,Ngày làm bù,False
+2016-10-01,Quốc khánh Trung Quốc,True
+2016-10-02,Quốc khánh Trung Quốc,True
+2016-10-03,Quốc khánh Trung Quốc,True
+2016-10-04,Quốc khánh Trung Quốc,True
+2016-10-05,Quốc khánh Trung Quốc,True
+2016-10-06,Quốc khánh Trung Quốc,True
+2016-10-07,Quốc khánh Trung Quốc,True
+2016-10-08,Ngày làm bù,False
+2016-10-09,Ngày làm bù,False
+2017-01-01,Tết Dương lịch,True
+2017-01-02,Tết Dương lịch,True
+2017-01-22,Ngày làm bù,False
+2017-01-27,Tết Nguyên Đán,True
+2017-01-28,Tết Nguyên Đán,True
+2017-01-29,Tết Nguyên Đán,True
+2017-01-30,Tết Nguyên Đán,True
+2017-01-31,Tết Nguyên Đán,True
+2017-02-01,Tết Nguyên Đán,True
+2017-02-02,Tết Nguyên Đán,True
+2017-02-04,Ngày làm bù,False
+2017-04-01,Ngày làm bù,False
+2017-04-02,Tiết Thanh Minh,True
+2017-04-03,Tiết Thanh Minh,True
+2017-04-04,Tiết Thanh Minh,True
+2017-04-29,Quốc tế Lao động,True
+2017-04-30,Quốc tế Lao động,True
+2017-05-01,Quốc tế Lao động,True
+2017-05-27,Ngày làm bù,False
+2017-05-28,Tết Đoan Ngọ,True
+2017-05-29,Tết Đoan Ngọ,True
+2017-05-30,Tết Đoan Ngọ,True
+2017-09-30,Ngày làm bù,False
+2017-10-01,Quốc khánh Trung Quốc và Tết Trung Thu,True
+2017-10-02,Quốc khánh Trung Quốc và Tết Trung Thu,True
+2017-10-03,Quốc khánh Trung Quốc và Tết Trung Thu,True
+2017-10-04,Quốc khánh Trung Quốc và Tết Trung Thu,True
+2017-10-05,Quốc khánh Trung Quốc và Tết Trung Thu,True
+2017-10-06,Quốc khánh Trung Quốc và Tết Trung Thu,True
+2017-10-07,Quốc khánh Trung Quốc và Tết Trung Thu,True
+2017-10-08,Quốc khánh Trung Quốc và Tết Trung Thu,True
