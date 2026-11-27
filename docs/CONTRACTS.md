@@ -52,7 +52,6 @@
 | 13 | `precipitation_mm`      | FLOAT                    |   mm   | Yes       | Hourly precipitation / rainfall                     |
 | 14 | `hour`                  | INTEGER                  |  0–23  | No        | Hour of day                                         |
 | 15 | `weekday`               | INTEGER                  |  0–6  | No        | Day of the week                                     |
-
 **Notes:**
 
 - Lag and rolling mean features must be calculated separately for each monitoring station (`station_id`).
