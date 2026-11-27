@@ -3,6 +3,7 @@ import os
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any
 
 import mlflow
 import pandas as pd
@@ -59,7 +60,9 @@ app = FastAPI(
 
 
 class PredictionRequest(BaseModel):
-    features: list[dict[str, float]] | list[list[float]] = Field(
+    model_name: str | None = Field(default=None, description="Tên mô hình (tùy chọn)")
+    timestamp: str | None = Field(default=None, description="Thời điểm gửi dự báo (tùy chọn)")
+    features: list[dict[str, Any]] | list[list[float]] = Field(
         ..., description="Dữ liệu quan trắc đầu vào để dự báo nồng độ PM2.5."
     )
 
