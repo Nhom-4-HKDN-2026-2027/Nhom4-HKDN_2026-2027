@@ -141,7 +141,7 @@
 | :--------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Input schema**             | `station_id` (STRING), `pm25_ug_m3` (FLOAT), `pm25_lag_1h` (FLOAT), `pm25_lag_3h` (FLOAT), `pm25_lag_24h` (FLOAT), `hour` (INT), `weekday` (INT), `month` (INT), (`temperature_c`, `relative_humidity_pct`, `wind_speed_m_s`, `wind_direction_deg`, `precipitation_mm`).                                                                             |
 | **Input format**             | JSON / DataFrame                                                                                                                                                                                                                                                                                                                                                                                  |
-| **Output schema**            | `request_id` (STRING), `status` (STRING), `model_name` (STRING), `model_alias` (STRING), và `predictions`*                                                                                                                                                                                                                                     |
+| **Output schema**            | `request_id` (STRING), `status` (STRING), `model_name` (STRING), `model_version` (STRING), `model_alias` (STRING), `target_time` (STRING / ARRAY), và `predictions` (LIST[FLOAT]) |
 | **Output format**            | JSON                                                                                                                                                                                                                                                                                                                                                                                              |
 | **Batch prediction**         | Supported                                                                                                                                                                                                                                                                                                                                                                                         |
 | **Missing feature handling** | Impute missing `pm25` lags using forward-fill / last known station value (or rolling mean); impute missing weather features using recent station median; reject request with HTTP 422/400 if core identifiers (`station_id`, `timestamp`) or all required features are missing. AI is responsible for encoding `station_id` in the model preprocessing pipeline before logging the model. |
@@ -176,7 +176,9 @@
   "request_id": "c1f8d4e2-8b09-4df8-7e41-28e441b209a1",
   "status": "success",
   "model_name": "pm25_forecasting",
+  "model_version": "1",
   "model_alias": "champion",
+  "target_time": "2026-11-28T16:00:00Z",
   "predictions": [185.4]
 }
 ```
@@ -240,7 +242,7 @@
 | Object                     | Naming convention          | Example                                           |
 | :------------------------- | :------------------------- | :------------------------------------------------ |
 | **Experiment**       | snake_case                 | `pm25_forecasting`                              |
-| **Registered model** | kebab-case                 | `pm25_forecasting`                              |
+| **Registered model** | snake_case                 | `pm25_forecasting`                              |
 | **Model version**    | Auto-incrementing integer  | `1`, `2`                                      |
 | **Run name**         | `<model_type>-<purpose>` | `lightgbm-baseline`, `random-forest-baseline` |
 | **Artifact**         | MLflow Model standard      | `model/model.pkl`, `MLmodel`                  |
@@ -296,13 +298,15 @@
 
 #### 4.3. API Response
 
-| Field           | Data type   | Description                                                                         |
-| :-------------- | :---------- | :---------------------------------------------------------------------------------- |
-| `request_id`  | STRING      | Unique request identifier (UUID) generated for distributed tracing and log auditing |
-| `status`      | STRING      | Processing status of the prediction request (`"success"`)                         |
-| `model_name`  | STRING      | Name of the registered model serving predictions (`"pm25_forecasting"`)           |
-| `model_alias` | STRING      | Active model registry alias deployed in serving (`"champion"`)                    |
-| `predictions` | LIST[FLOAT] | List of forecasted PM2.5 concentrations in µg/m³ (non-negative floats)            |
+| Field           | Data type             | Description                                                                          |
+| :-------------- | :-------------------- | :----------------------------------------------------------------------------------- |
+| `request_id`    | STRING                | Unique request identifier (UUID) generated for distributed tracing and log auditing  |
+| `status`        | STRING                | Processing status of the prediction request (`"success"`)                          |
+| `model_name`    | STRING                | Name of the registered model serving predictions (`"pm25_forecasting"`)            |
+| `model_version` | STRING                | Specific version of the registered model deployed in serving (e.g. `"1"`, `"2"`)    |
+| `model_alias`   | STRING                | Active model registry alias deployed in serving (`"champion"`)                     |
+| `target_time`   | STRING / LIST[STRING] | Forecast target timestamp (typically `event_time + 1h`, e.g. `"2026-11-28T16:00:00Z"`) |
+| `predictions`   | LIST[FLOAT]           | List of forecasted PM2.5 concentrations in µg/m³ (non-negative floats)             |
 
 **Example response:**
 
@@ -311,7 +315,9 @@
   "request_id": "c1f8d4e2-8b09-4df8-7e41-28e441b209a1",
   "status": "success",
   "model_name": "pm25_forecasting",
+  "model_version": "1",
   "model_alias": "champion",
+  "target_time": "2026-11-28T16:00:00Z",
   "predictions": [38.5]
 }
 ```
