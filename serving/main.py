@@ -1,6 +1,6 @@
 import logging
 import os
-import uuid
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -9,40 +9,70 @@ import pandas as pd
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import RedirectResponse
-from pydantic import BaseModel, Field
+from mlflow.tracking import MlflowClient
+
+try:
+    from serving.metrics import record_prediction_metrics
+    from serving.schemas import (
+        PredictionRequest,
+        PredictionResponse,
+        compute_target_time,
+    )
+except ImportError:
+    from metrics import record_prediction_metrics
+    from schemas import (
+        PredictionRequest,
+        PredictionResponse,
+        compute_target_time,
+    )
 
 ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(ENV_PATH)
 
 # Configuration
 MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
-MODEL_NAME = os.getenv("MODEL_NAME", "pm25-forecasting")
+MODEL_NAME = os.getenv("MODEL_NAME", "pm25_forecasting")
 MODEL_ALIAS = os.getenv("MODEL_ALIAS", "champion")
 MODEL_URI = os.getenv("MODEL_URI")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Model loading
-
 model = None
+model_version: str = "unknown"
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    global model
+def resolve_and_load_model():
+    """Tải model từ MLflow Model Registry và xác định model_version cụ thể."""
+    global model, model_version
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-    # Ưu tiên MODEL_URI nếu có, ngược lại fallback về tên model + alias (mặc định champion)
     resolved_model_uri = MODEL_URI or f"models:/{MODEL_NAME}@{MODEL_ALIAS or 'champion'}"
     logger.info("MLflow URI: %s", MLFLOW_TRACKING_URI)
     logger.info("Model URI: %s", resolved_model_uri)
     try:
         model = mlflow.pyfunc.load_model(resolved_model_uri)
-        logger.info("Model loaded successfully")
+        v = getattr(getattr(model, "metadata", None), "model_version", None)
+        if v:
+            model_version = str(v)
+        else:
+            try:
+                client = MlflowClient(tracking_uri=MLFLOW_TRACKING_URI)
+                target_alias = MODEL_ALIAS or "champion"
+                champ_ver = client.get_model_version_by_alias(MODEL_NAME, target_alias)
+                model_version = str(champ_ver.version)
+            except Exception:
+                model_version = "1"
+        logger.info("Model loaded successfully (Version: %s)", model_version)
     except Exception:
         logger.exception("Failed to load model")
         raise
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    resolve_and_load_model()
     yield
+    global model
     model = None
 
 
@@ -55,31 +85,12 @@ app = FastAPI(
 )
 
 
-# Request / Response Schemas
-
-
-class PredictionRequest(BaseModel):
-    features: list[dict[str, float]] | list[list[float]] = Field(
-        ..., description="Dữ liệu quan trắc đầu vào để dự báo nồng độ PM2.5."
-    )
-
-
-class PredictionResponse(BaseModel):
-    request_id: str = Field(
-        default_factory=lambda: str(uuid.uuid4()), description="Mã định danh lượt gọi API"
-    )
-    status: str = Field(default="success", description="Trạng thái xử lý")
-    model_name: str
-    model_alias: str | None = None
-    predictions: list[float] = Field(..., description="Nồng độ PM2.5 dự báo (µg/m³)")
-
-
 # Endpoints
 
 
 @app.get("/", include_in_schema=False)
 def index():
-    """Tự động chuyển hướng từ trang chủ sang Swagger UI trực quan."""
+    """Tự động chuyển hướng sang Swagger UI trực quan."""
     return RedirectResponse(url="/docs")
 
 
@@ -89,6 +100,8 @@ def health_check():
         "status": "healthy",
         "model_loaded": model is not None,
         "model_name": MODEL_NAME,
+        "model_version": model_version,
+        "model_alias": MODEL_ALIAS or "champion",
     }
 
 
@@ -96,15 +109,45 @@ def health_check():
 def predict(request: PredictionRequest):
     if model is None:
         raise HTTPException(status_code=503, detail="Model is not loaded")
+    t0 = time.perf_counter()
     try:
         input_data = pd.DataFrame(request.features)
         preds = model.predict(input_data)
 
-        # Ép sang float (PM2.5 không âm)
+        target_time = None
+        station_id = "unknown"
+        if request.timestamp:
+            target_time = compute_target_time(request.timestamp)
+        elif (
+            isinstance(request.features, list)
+            and len(request.features) > 0
+            and isinstance(request.features[0], dict)
+        ):
+            first_time = request.features[0].get("event_time") or request.features[0].get(
+                "timestamp"
+            )
+            if first_time:
+                target_time = compute_target_time(first_time)
+            station_id = str(request.features[0].get("station_id") or "unknown")
+
+        predictions_list = [max(0.0, float(v)) for v in preds]
+        duration_sec = time.perf_counter() - t0
+
+        # Ghi nhận OpenTelemetry Metrics (Mục 5.1 & 5.2 CONTRACTS.md)
+        record_prediction_metrics(
+            count=len(predictions_list),
+            duration_sec=duration_sec,
+            model_name=MODEL_NAME,
+            model_version=model_version,
+            station_id=station_id,
+        )
+
         return PredictionResponse(
             model_name=MODEL_NAME,
+            model_version=model_version,
             model_alias=MODEL_ALIAS or "champion",
-            predictions=[max(0.0, float(v)) for v in preds],
+            target_time=target_time,
+            predictions=predictions_list,
         )
     except Exception as exc:
         logger.exception("Prediction failed")
@@ -114,7 +157,10 @@ def predict(request: PredictionRequest):
 # /reload GIÚP không cần restart container
 @app.post("/reload", tags=["Management"], summary="Reload model champion mới nhất")
 def reload_model():
-    global model
+    resolve_and_load_model()
     resolved_uri = MODEL_URI or f"models:/{MODEL_NAME}@{MODEL_ALIAS or 'champion'}"
-    model = mlflow.pyfunc.load_model(resolved_uri)
-    return {"status": "reloaded", "model_uri": resolved_uri}
+    return {
+        "status": "reloaded",
+        "model_uri": resolved_uri,
+        "model_version": model_version,
+    }

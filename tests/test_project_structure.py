@@ -38,3 +38,9 @@ def test_required_files_exist():
     missing_files = [file for file in REQUIRED_FILES if not (PROJECT_ROOT / file).is_file()]
 
     assert not missing_files, f"Missing files: {missing_files}"
+
+
+if __name__ == "__main__":
+    test_required_directories_exist()
+    test_required_files_exist()
+    print("All required directories and files exist.")

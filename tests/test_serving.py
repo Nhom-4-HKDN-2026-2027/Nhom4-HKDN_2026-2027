@@ -1,7 +1,10 @@
+import os
 from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
+
+os.environ["ENABLE_OTEL"] = "false"
 
 
 @pytest.fixture
@@ -35,6 +38,24 @@ def test_predict_endpoint(mock_mlflow_model):
             data = response.json()
             assert "predictions" in data
             assert len(data["predictions"]) == 2
+            assert "model_version" in data
+            assert data["model_version"] is not None
+
+
+def test_predict_endpoint_with_timestamp(mock_mlflow_model):
+    with patch("mlflow.pyfunc.load_model", return_value=mock_mlflow_model):
+        from serving.main import app
+
+        with TestClient(app) as client:
+            payload = {
+                "timestamp": "2026-11-28T15:00:00Z",
+                "features": [{"pm25_ug_m3": 45.0, "station_id": "test_station"}],
+            }
+            response = client.post("/predict", json=payload)
+            assert response.status_code == 200
+            data = response.json()
+            assert data["target_time"] == "2026-11-28T16:00:00Z"
+            assert data["model_version"] is not None
 
 
 if __name__ == "__main__":

@@ -161,7 +161,7 @@ services:
       AWS_DEFAULT_REGION: us-east-1
 
     command: >
-      mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri postgresql+psycopg2://${POSTGRES_USER:-mlflow}:${POSTGRES_PASSWORD:-mlflow123}@postgres:5432/${POSTGRES_DB:-mlflow} --artifacts-destination s3://mlflow/ --serve-artifacts
+      mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri postgresql+psycopg2://${POSTGRES_USER:-mlflow}:${POSTGRES_PASSWORD:-mlflow123}@postgres:5432/${POSTGRES_DB:-mlflow} --artifacts-destination s3://models/ --serve-artifacts
     ports:
       - "5000:5000"
     healthcheck:
@@ -184,7 +184,7 @@ services:
       AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
       AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
       AWS_DEFAULT_REGION: us-east-1
-      MODEL_NAME: ${MODEL_NAME:-pm25-forecasting}
+      MODEL_NAME: ${MODEL_NAME:-pm25_forecasting}
       MODEL_ALIAS: ${MODEL_ALIAS:-champion}
     ports:
       - "8000:8000"
